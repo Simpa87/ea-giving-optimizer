@@ -1,9 +1,20 @@
 # ea-giving-optimizer
-Tool for running scenarios with different assumptions (returns, discounting, leaking money) to see total lifetime giving
+Tool for running scenarios with different assumptions (returns, discounting, leaking money) to see total lifetime giving.
+The idea is to be able to model trade-offs with different assumptions:
+- Interest on money saved to give more later (stock market return etc.)
+- Cost of waiting
+  - Existential risk compounding
+  - Though saving QALY in the future might be as valuable as now, the problem of global suffering might be bigger now
+  - Risk of "leaking" from intended giving to other causes (loans to relatives, inheritance etc., bigger amounts later "feeling more expensive")
+- Constraints
+  - Might need minimum amount X at age Y (apartment, retirement)
+
+<b>Draft version:</b><br>
+This is a draft version and costs for waiting are not yet implemented, hence the current solution is trivial - just wait as long as possible with giving after return on the savings. 
 
 
 ## 1. Set up a virtualenv and activate it
-The library specific virtualenv should be located in the library specific root folder
+It is suggested to create a virtualenv for installing required dependencies in it
 
 ```bash
 python3 -m venv .env 
@@ -11,13 +22,16 @@ source .env/bin/activate
 ```
 
 ## 2. Install dependencies
-cd to root where setup.py is, and make sure right virtualenv is activated
+cd to root where setup.py is, and make sure the right virtualenv is activated
 ```bash
 pip install -e .
 ```
 
-## 3. Open notebook
-Go to ea_giving_optimizer and check out the notebook or create your own and explore!
+## 3. Open notebook and explore
+Having the virtualenv activated and being in the project directory, launch jupyter notebook and explore (e.g. check out the example notebook in ea_giving_optimizer)
+```bash
+jupyter notebook
+```
 
 ## Optional - Set up pytest for unit tests in Pycharm
 - Make sure pytest is added in a test section of the setup.py file, and that it is installed in the virtualenv
