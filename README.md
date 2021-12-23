@@ -34,8 +34,7 @@ jupyter notebook
 ```
 
 ## Optional - Set up pytest for unit tests in Pycharm
-- Make sure pytest is added in a test section of the setup.py file, and that it is installed in the virtualenv
-- From the configuration panel up in the top right of Pycharm, select Edit configurations from the dropdown
+- Having installed pytest from the dependencies, from the configuration panel up in the top right of Pycharm, select Edit configurations from the dropdown
 - Click the + sign to add a new configuration and go to Python tests --> pytest
 - In "Target:", select script path, and add the path for the tests folder (or specific script in it)
 - Also select the right virtualenv for the project to run the tests in that window
