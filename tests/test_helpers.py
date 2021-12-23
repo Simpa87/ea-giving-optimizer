@@ -25,6 +25,17 @@ def test_remains():
     ) == 1.1
 
 
+def test_remains_with_leaking():
+
+    assert remains(
+        disp={4: 1, 5: 1, 6: 1},
+        give_share={4: 0, 5: 0, 6: 0},  # Give all at step 5 => 0
+        i=6,
+        r=1,
+        leak_mult={4: 0.5, 5: 0.5, 6: 1}  # TODO last age leak has no impact
+    ) == ((1 * 0.5 + 1 * 0.5) * 0.5 + 1) * 1
+
+
 def test_tot_give():
     assert round(
         tot_give(

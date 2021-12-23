@@ -12,11 +12,20 @@ class Config:
                  month_req_cost_k_per_age={30: 20, 65: 20, 66: 20},
                  share_tax_per_k_salary={10: (1 - 8.2 / 10), 20: (1 - 16 / 20), 30: (1 - 24 / 30), 40: (1 - 31 / 40),
                                          50: (1 - 37 / 50), 60: (1 - 42 / 60), 80000: (1 - 52 / 80)},
+                 leak_multiplier_per_age={30: 0.95, 45: 0.8, 55: 0.75, 80: 0.5},  # E.g. dying and 50% legal inheritence
                  current_age=30,
                  current_savings_k=0,
                  life_exp_years=80,
                  return_after_inflation=1.04,
                  ):
+
+        # Consistency
+        assert all((0 <= v <= 1) for v in share_tax_per_k_salary.values())
+        assert all((0 <= v <= 1) for v in leak_multiplier_per_age.values())
+        assert life_exp_years > current_age
+        assert 1 <= return_after_inflation <= 1.5
+
+
         self.life_exp_years = life_exp_years
         self.return_after_inflation = return_after_inflation
 
@@ -53,6 +62,17 @@ class Config:
         # Left join (map) interpolated cost per age
         df['req_cost_k_year'] = df['age'].map(cost_per_age_df.to_dict()['req_cost']) * 12
 
+        # Leaking multiplier per age
+        leak_mult_per_age_df = self.interpolate_df_from_dict(
+            leak_multiplier_per_age,
+            min_idx=min(leak_multiplier_per_age.keys()),
+            max_idx=max(leak_multiplier_per_age.keys()),
+            col_name='leak_multiplier',
+            )
+
+        # Left join (map) it
+        df['leak_multiplier'] = df['age'].map(leak_mult_per_age_df.to_dict()['leak_multiplier'])
+
         # Only include cumulation and compounding from current age
         df = df.loc[df.index >= current_age]
 
@@ -83,10 +103,16 @@ class Config:
                             columns=[col_name]).reindex(list(range(min_idx, max_idx + 1, step_size))).interpolate()
 
 
-def remains(disp, give_share, i, r) -> float:
+def remains(
+        disp: dict,
+        give_share: dict,
+        i: int,
+        r: float,
+        leak_mult: dict = None
+) -> float:
     i -= 1
     if i >= min(disp.keys()):
-        return (1 - give_share[i]) * (disp[i] * r +
+        return (1 - give_share[i]) * (disp[i] * r * (leak_mult[i] if leak_mult is not None else 1) +
                                       remains(disp, give_share, i, r) * r  # One step interest
                                       if give_share[i] != 1 else 0  # Stop backward search if gave all (validated works)
                                       )
@@ -94,10 +120,17 @@ def remains(disp, give_share, i, r) -> float:
         return 0
 
 
-def tot_give(disp, give_share, r):
+def tot_give(
+        disp: dict,
+        give_share: dict,
+        r: float,
+        leak_mult: dict = None
+) -> float:
     i_min = min(give_share.keys())
     i_max = max(give_share.keys())
-    return sum([give_share[i] * (disp[i] + remains(disp, give_share, i_max, r)) for i in range(i_min, i_max + 1)]) * r
+    return sum([give_share[i] *
+                (disp[i] + remains(disp, give_share, i_max, r, leak_mult))
+                for i in range(i_min, i_max + 1)]) * r
 
 
 def get_baseline_giving(c: Config) -> dict:
@@ -119,12 +152,13 @@ def best_giving_optuna(
 
     # Inline to pass disp, maybe factor out class to pass the nicer way
     disp = c.df['disposable_salary'].to_dict()  # TODO + initial savings
+    leak_mult = c.df['leak_multiplier'].to_dict() if not (c.df['leak_multiplier'] == 1).all() else None
 
     def giving_objective_optuna(trial):
         give_share_dict = {}
         for i in list(disp.keys()):
             give_share_dict[i] = trial.suggest_float(i, 0, 1)
-        return tot_give(disp, give_share_dict, r=c.return_after_inflation)
+        return tot_give(disp, give_share_dict, r=c.return_after_inflation, leak_mult=leak_mult)
 
     study = optuna.create_study(direction='maximize')
     if enqueue_baseline:
