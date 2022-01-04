@@ -214,6 +214,31 @@ def give_all_always(c: Config) -> dict:
     return give_always_dict
 
 
+def give_half_always(c: Config) -> dict:
+
+    # Give 50% all the time except give everything last
+    give_half_dict = {}
+    for i in list(c.df.index):
+        if i != max(c.df.index):
+            give_half_dict[i] = 0.5
+        else:
+            give_half_dict[i] = 1
+
+    return give_half_dict
+
+
+def give_linear_increase(c: Config) -> dict:
+
+    # Give 50% all the time except give everything last
+    linear_increase_dict = {}
+    i_max = max(c.df.index)
+    i_min = min(c.df.index)
+    for i in list(c.df.index):
+        linear_increase_dict[i] = (i - i_min) / (i_max - i_min)
+
+    return linear_increase_dict
+
+
 def best_giving_optuna(
         c: Config,
         enqueue_baseline: bool = True,
@@ -235,6 +260,10 @@ def best_giving_optuna(
         study.enqueue_trial(give_last_dict)
         give_all_dict = give_all_always(c)
         study.enqueue_trial(give_all_dict)
+        give_half_dict = give_half_always(c)
+        study.enqueue_trial(give_half_dict)
+        linear_increase_dict = give_linear_increase(c)
+        study.enqueue_trial(linear_increase_dict)
 
     study.optimize(giving_objective_optuna, n_trials=n_trials)
     return study.best_params
