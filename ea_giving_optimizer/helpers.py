@@ -175,7 +175,7 @@ def cum_res_dicts(
         # Separate out leaking for visualizations
         tot_leak_dict[i] = nom_give_dict[i] - net_give_dict[i]
 
-    return nom_give_dict, net_give_dict, tot_leak_dictq
+    return nom_give_dict, net_give_dict, tot_leak_dict
 
 
 def apply_cum_metrics(
