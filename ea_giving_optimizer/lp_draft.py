@@ -13,7 +13,7 @@ def best_giving_pulp(c: Config) -> pd.DataFrame:
     age_index = list(df.index)
     disp = df['disposable_salary'].to_dict()
     give_share_dict = LpVariable.dicts('give_share', age_index, lowBound=0, upBound=1, cat='Continuous')
-    r = c.return_after_inflation
+    r = c.net_return_mult
 
     # Define Objective
     prob = lpSum(tot_give(disp, give_share_dict, r))
