@@ -3,14 +3,13 @@ Tool for running scenarios with different assumptions (returns, discounting, lea
 The idea is to be able to model trade-offs with different assumptions:
 - Interest on money saved to give more later (stock market return etc.)
 - Cost of waiting
-  - Existential risk compounding
-  - Though saving QALY in the future might be as valuable as now, the problem of global suffering might be bigger now
-  - Risk of "leaking" from intended giving to other causes (loans to relatives, inheritance etc., bigger amounts later "feeling more expensive")
-- Constraints
-  - Might need minimum amount X at age Y (apartment, retirement)
+  - Existential risk compounding (nukes, global warming, AI, biotech etc.)
+  - Though saving lives in the future might be as valuable as now, the problem of global suffering might be bigger now, making it bad to wait
+  - Risk of "leaking" from intended giving to other causes (loans to relatives, inheritance etc., bigger amounts later "feeling more expensive", hence giving less)
 
-<b>Draft version:</b><br>
-This is a draft version and costs for waiting are not yet implemented, hence the current solution is trivial - just wait as long as possible with giving after return on the savings. 
+<b>Feature ideas for the future</b><br>
+ - Be able to set optimization constraints, e.g. need minimum amount X at age Y (apartment, retirement). Would currently need to be set by user as required cost of living for saving up the years before (implied savings).
+ - Maybe separate discount rates for giving to global poverty (direct QALY impact) vs existential risks (indirect, long-term QALY impact). Might there be an argument for waiting some years for global suffering giving after returns, but always giving the existential risk allocation immediately?
 
 
 ## 1. Set up a virtualenv and activate it

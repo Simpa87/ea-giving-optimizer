@@ -23,14 +23,15 @@ class Config:
                  share_tax_per_k_salary={10: (1 - 8.2 / 10), 20: (1 - 16 / 20), 30: (1 - 24 / 30), 40: (1 - 31 / 40),
                                          50: (1 - 37 / 50), 60: (1 - 42 / 60), 80000: (1 - 52 / 80)},
 
-                 # Return on savings
+                 # Return on savings e.g. stock market rate
                  return_rate_after_inflation=0.07,
 
-                 # Cost of exponential risk compounding
+                 # Cost of exponential risks compounding
                  existential_risk_discount_rate=0.08,
 
                  # Leaking money to other causes
                  # E.g. dying and 50% legal inheritance
+                 # Note that this leakage is applied for a certain age for the total giving result for that age
                  leak_multiplier_per_age={30: 0.95, 45: 0.8, 55: 0.75, 80: 0.5},
                  ):
 
