@@ -9,14 +9,15 @@ def best_giving_pulp(c: Config) -> pd.DataFrame:
 
     df = c.df.copy()
 
+    print("Note that leaking not implemented yet for lp approach")
+
     prob = LpProblem('MaximizeGiving', LpMaximize)
     age_index = list(df.index)
     disp = df['disposable_salary'].to_dict()
     give_share_dict = LpVariable.dicts('give_share', age_index, lowBound=0, upBound=1, cat='Continuous')
-    r = c.net_return_mult
 
     # Define Objective
-    prob = lpSum(tot_give(disp, give_share_dict, r))
+    prob = lpSum(tot_give(disp, give_share_dict, c.net_return_mult))
 
     # Solve problem and return dict with coefs
     prob.solve()
