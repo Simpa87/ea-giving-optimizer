@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import optuna
-
+from scipy.optimize import linprog
 
 
 class Config:
@@ -267,3 +267,49 @@ def best_giving_optuna(
 
     study.optimize(giving_objective_optuna, n_trials=n_trials)
     return study.best_params
+
+
+def get_A_ub(length: int, r: float = 1.1) -> np.ndarray:
+    A_ub = np.zeros((length, length))
+    for i in range(len(A_ub)):
+        for j in range(len(A_ub)):
+            if i >= j:
+                A_ub[i, j] = r ** (i - j)
+    return A_ub
+
+
+def get_b_ub(disp: dict, r: float) -> list:
+    b_ub = []
+    i_min = min(disp.keys())
+    i_max = max(disp.keys())
+    for age in disp.keys():
+        res_list = [disp[age_] * r ** (age - age_ + 1) for age_ in range(i_min, age + 1)]
+        res = sum(res_list)
+        b_ub.append(res)
+    return b_ub
+
+
+def get_optimization_variables(conf: Config):
+    # Unpack
+    disp = conf.df.disposable_salary.to_dict()
+    leak_mult = conf.df.leak_multiplier.to_dict()
+    r = conf.net_return_mult
+
+    # Get vectors and matrices for optimization
+    c = -1 * np.array(list(leak_mult.values()))
+    A_ub = get_A_ub(length=len(disp), r=r)
+    b_ub = get_b_ub(disp=disp, r=r)
+
+    return c, A_ub, b_ub
+
+
+def run_linear_optimization(conf: Config):
+    c, A_ub, b_ub = get_optimization_variables(conf)
+    result = linprog(c, A_ub, b_ub)
+    tot_given = round(np.sum(result.x), 3)
+    lives_saved = int(round(tot_given / conf.save_qa_life_cost_k))
+    print(f"\nQuality adjusted lives saved: {lives_saved}")
+    print(f"\nSum given {tot_give}")
+    print("\nRecommended tot given per age:", dict(zip(list(conf.df.index), [round(i, 2) for i in result.x])))
+    return result
+

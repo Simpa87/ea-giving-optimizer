@@ -1,4 +1,4 @@
-from ea_giving_optimizer.helpers import remains, tot_give
+from ea_giving_optimizer.helpers import remains, tot_give, get_b_ub
 
 
 def test_remains_simple():
@@ -78,3 +78,11 @@ def test_tot_give_with_leaking():
         r=r,
         leak_mult={1: 0.49, 2: 0.45}
     ), 2) == round(0.4 * 0.49 * r ** 2 + (0.6 + 1.1) * 0.5 * 0.45 * r ** 1, 2)
+
+
+def test_get_b_ub():
+    assert get_b_ub({4: 1, 5: 1, 6: 1}, r=1)[-1] == 3
+    assert get_b_ub({4: 1, 5: 2.11, 6: 3}, r=1)[-1] == 1 + 2.11 + 3
+    assert get_b_ub({4: 1.11, 5: 2, 6: 1}, r=2)[0] == 1.11 * 2 ** 1
+    assert get_b_ub({4: 1.11, 5: 2, 6: 1}, r=2)[1] == 1.11 * 2 ** 2 + 2 * 2 ** 1
+    assert get_b_ub({4: 1.11, 5: 2, 6: 1}, r=2)[2] == 1.11 * 2 ** 3 + 2 * 2 ** 2 + 1 * 2 ** 1
