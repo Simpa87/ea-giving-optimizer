@@ -27,7 +27,7 @@ class Config:
                  return_rate_after_inflation=0.07,
 
                  # Cost of exponential risks compounding
-                 existential_risk_discount_rate=0.023,
+                 existential_risk_discount_rate=0.0023,
 
                  # Leaking money to other causes
                  # E.g. dying and 50% legal inheritance
