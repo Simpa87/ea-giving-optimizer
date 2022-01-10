@@ -9,7 +9,10 @@ The idea is to be able to model trade-offs with different assumptions:
 
 <b>Feature ideas for the future</b><br>
  - Be able to set optimization constraints, e.g. need minimum amount X at age Y (apartment, retirement). Would currently need to be set by user as required cost of living for saving up the years before (implied savings).
- - Maybe separate discount rates for giving to global poverty (direct QALY impact) vs existential risks (indirect, long-term QALY impact). Might there be an argument for waiting some years for global suffering giving after returns, but always giving the existential risk allocation immediately?
+
+<b>Other ideas</b><br>
+- Could it be that one of the most high impact and low effort moral decisions is simply to write ones testament early in life, to solidify the decision to give and have a large share of savings go to EA if passing away, by default?
+- Interesting article about discounting humanity into eternity with existential risk rates and estimating cost of waiting to give: https://forum.effectivealtruism.org/posts/3fmcNMrR8cktLnoYk/giving-now-vs-later-for-existential-risk-an-initial-approach
 
 
 ## 1. Set up a virtualenv and activate it

@@ -15,10 +15,9 @@ setup(
         'matplotlib',
         'seaborn',
         'scikit-learn',
-        'optuna',
-        'pulp',
         'ipython',
         'notebook',
+        'scipy',
         'pytest'
     ],
     tests_require=['nose'],

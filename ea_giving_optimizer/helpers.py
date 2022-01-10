@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
-import optuna
 from scipy.optimize import linprog
+import matplotlib.pyplot as plt
 
 
 class Config:
@@ -27,7 +27,7 @@ class Config:
                  return_rate_after_inflation=0.07,
 
                  # Cost of exponential risks compounding
-                 existential_risk_discount_rate=0.08,
+                 existential_risk_discount_rate=0.023,
 
                  # Leaking money to other causes
                  # E.g. dying and 50% legal inheritance
@@ -113,160 +113,10 @@ class Config:
                             index=data_dict.keys(),
                             columns=[col_name]).reindex(list(range(min_idx, max_idx + 1, step_size))).interpolate()
 
-    def print_lives_saved(self):
-        print(round(self.df['cum_net_give'].iloc[-1] / self.save_qa_life_cost_k), "lives saved")
-
-
-def remains(
-        disp: dict,
-        give_share: dict,
-        i: int,
-        r: float,
-) -> float:
-    if i >= min(disp.keys()):
-        tot_remains = ((1 - give_share[i])
-                       * (disp[i] * r + remains(disp, give_share, i - 1, r) * r if give_share[i] != 1 else 0)
-                       )
-        return tot_remains
-
-    else:
-        return 0
-
-
-def tot_give(
-        disp: dict,
-        give_share: dict,
-        r: float,
-        leak_mult: dict = None,
-) -> float:
-
-    i_min = min(give_share.keys())
-    i_max = max(give_share.keys())
-    return (
-            sum([give_share[i] * (leak_mult[i] if leak_mult is not None else 1)
-                 * (disp[i] + remains(disp, give_share, i - 1, r))
-                 for i in range(i_min, i_max + 1)])
-            * r)
-
-
-def cum_res_dicts(
-        c: Config,
-        give_share_rec: dict,
-) -> tuple:
-
-    # Get absolute number result by applying recursively
-    nom_give_dict = {}
-    tot_leak_dict = {}
-    net_give_dict = {}
-
-    for i in give_share_rec.keys():
-
-        # Prep variables
-        give_share_i = pd.Series(give_share_rec).loc[min(give_share_rec.keys()):i].to_dict()
-        disp = c.df['disposable_salary'].loc[min(give_share_rec.keys()):i].to_dict()
-        leak_mult = c.df['leak_multiplier'].loc[min(give_share_rec.keys()):i].to_dict()
-
-        # Without leaking
-        nom_give_dict[i] = tot_give(disp, give_share_i, r=c.net_return_mult, leak_mult=None)
-
-        # After leaking
-        net_give_dict[i] = tot_give(disp, give_share_i, r=c.net_return_mult, leak_mult=leak_mult)
-
-        # Separate out leaking for visualizations
-        tot_leak_dict[i] = nom_give_dict[i] - net_give_dict[i]
-
-    return nom_give_dict, net_give_dict, tot_leak_dict
-
-
-def apply_cum_metrics(
-        c: Config,
-        give_share_rec: dict,
-) -> Config:
-
-    nom_give_dict, net_give_dict, tot_leak_dict = cum_res_dicts(c, give_share_rec)
-
-    c.df['cum_nom_give'] = pd.Series(nom_give_dict)
-    c.df['cum_tot_leak'] = pd.Series(tot_leak_dict)
-    c.df['cum_net_give'] = pd.Series(net_give_dict)
-
-    return c
-
-
-def give_all_last(c: Config) -> dict:
-
-    # Give everything last with interest as baseline to enqueue to run first
-    give_last_dict = {}
-    for i in list(c.df.index):
-        if i != max(c.df.index):
-            give_last_dict[i] = 0
-        else:
-            give_last_dict[i] = 1
-    return give_last_dict
-
-
-def give_all_always(c: Config) -> dict:
-
-    # Give everything last with interest as baseline to enqueue to run first
-    give_always_dict = {}
-    for i in list(c.df.index):
-        give_always_dict[i] = 1
-
-    return give_always_dict
-
-
-def give_half_always(c: Config) -> dict:
-
-    # Give 50% all the time except give everything last
-    give_half_dict = {}
-    for i in list(c.df.index):
-        if i != max(c.df.index):
-            give_half_dict[i] = 0.5
-        else:
-            give_half_dict[i] = 1
-
-    return give_half_dict
-
-
-def give_linear_increase(c: Config) -> dict:
-
-    # Give 50% all the time except give everything last
-    linear_increase_dict = {}
-    i_max = max(c.df.index)
-    i_min = min(c.df.index)
-    for i in list(c.df.index):
-        linear_increase_dict[i] = (i - i_min) / (i_max - i_min)
-
-    return linear_increase_dict
-
-
-def best_giving_optuna(
-        c: Config,
-        enqueue_baseline: bool = True,
-        n_trials: int = 50) -> dict:
-
-    # Inline to pass disp, maybe factor out class to pass the nicer way
-    disp = c.df['disposable_salary'].to_dict()  # TODO initial savings
-    leak_mult = c.df['leak_multiplier'].to_dict() if not (c.df['leak_multiplier'] == 1).all() else None
-
-    def giving_objective_optuna(trial):
-        give_share_dict = {}
-        for i in list(disp.keys()):
-            give_share_dict[i] = trial.suggest_float(i, 0, 1)
-        return tot_give(disp, give_share_dict, r=c.net_return_mult, leak_mult=leak_mult)
-
-    study = optuna.create_study(direction='maximize')
-    if enqueue_baseline:
-        give_last_dict = give_all_last(c)
-        study.enqueue_trial(give_last_dict)
-        give_all_dict = give_all_always(c)
-        study.enqueue_trial(give_all_dict)
-        give_half_dict = give_half_always(c)
-        study.enqueue_trial(give_half_dict)
-        linear_increase_dict = give_linear_increase(c)
-        study.enqueue_trial(linear_increase_dict)
-
-    study.optimize(giving_objective_optuna, n_trials=n_trials)
-    return study.best_params
+    def plot_summary(self, figsize=(20, 4)):
+        f, axes = plt.subplots(1, 2, figsize=figsize)
+        self.df[['give_recommendation_m']].plot(title='Give recommendation [m]', ax=axes[0])
+        self.df[['give_recommendation_m']].cumsum().plot(title='Cumulative give recommendation [m]', ax=axes[1])
 
 
 def get_A_ub(length: int, r: float = 1.1) -> np.ndarray:
@@ -303,13 +153,13 @@ def get_optimization_variables(conf: Config):
     return c, A_ub, b_ub
 
 
-def run_linear_optimization(conf: Config):
+def run_linear_optimization(conf: Config, figsize=(20, 5)):
     c, A_ub, b_ub = get_optimization_variables(conf)
     result = linprog(c, A_ub, b_ub)
     tot_given = round(np.sum(result.x), 3)
     lives_saved = int(round(tot_given / conf.save_qa_life_cost_k))
-    print(f"\nQuality adjusted lives saved: {lives_saved}")
-    print(f"\nSum given {tot_give}")
-    print("\nRecommended tot given per age:", dict(zip(list(conf.df.index), [round(i, 2) for i in result.x])))
-    return result
+    print(f"Quality adjusted lives saved: {lives_saved}")
+    print(f"\nSum given: {round(tot_given/1000, 1)} million")
+    conf.df['give_recommendation_m'] = np.array(result.x)/1000
+    conf.plot_summary(figsize=figsize)
 
