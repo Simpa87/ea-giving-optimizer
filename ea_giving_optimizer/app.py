@@ -6,7 +6,7 @@ from ea_giving_optimizer.helpers import Config, run_linear_optimization
 #  - Consider if refactor config into just a GivingOptimizer class that itself calls optimizer method
 #  - Add so that initial savings can be used
 #  - Containerize with docker-compose?
-#  - Maybe rates * 100 for % so easier to slide?
+#  - Maybe rates * 100 for % so easier to slide? Or just more decimalc on the slider itself
 
 
 st.title("""Effective Altruism Giving Optimizer""")
@@ -16,10 +16,11 @@ with st.form("input_assumptions", clear_on_submit=False):
                                     '35 k SEK)', min_value=1, max_value=200, value=35)
     current_age = st.slider('Current age', min_value=15, max_value=120, value=30)
     life_exp_years = st.slider('Life expectency', min_value=15, max_value=200, value=80)
-    return_rate_after_inflation = st.slider('Return rate after inflation',
-                                            min_value=0.0, max_value=0.2, value=0.05)
-    existential_risk_discount_rate = st.slider('Discount rate for cost of existential risk and global suffering',
-                                               min_value=0.000, max_value=0.100, value=0.002, step=0.001)
+    return_rate_after_inflation_percent = st.slider('Return rate after inflation [%]',
+                                            min_value=0.0, max_value=20.0, value=5.0, step=0.1)
+    existential_risk_discount_rate_percent = st.slider('Discount rate for cost of existential risk '
+                                                       'and global suffering [%]',
+                                                       min_value=0.0, max_value=10.0, value=0.2, step=0.01)
 
     month_salary_k_per_age = st.text_input('Month salary before tax [k] at different sample ages as a dictionary '
                                            '{age: salary}, they will be interpolated linearly',
@@ -50,6 +51,9 @@ if submit:
     month_req_cost_k_per_age = eval(month_req_cost_k_per_age)
     leak_multiplier_per_age = eval(leak_multiplier_per_age)
 
+    return_rate_after_inflation = return_rate_after_inflation_percent / 100
+    existential_risk_discount_rate = existential_risk_discount_rate_percent / 100
+
     conf = Config(
         save_qa_life_cost_k=save_qa_life_cost_k,
         current_age=current_age,
@@ -62,6 +66,6 @@ if submit:
         leak_multiplier_per_age=leak_multiplier_per_age
     )
     run_linear_optimization(conf)
-    st.write(f"Lives saved: {conf.lives_saved}, Sum given: {conf.sum_given_m} [m]")
+    st.write(f"Lives saved: {conf.lives_saved}, Sum given: {conf.sum_given_m :.2f} [m] ")
     fig = conf.plot_summary()
     st.pyplot(fig)

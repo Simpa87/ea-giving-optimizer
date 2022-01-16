@@ -53,14 +53,14 @@ class Config:
 
         salary_per_age_df = self.interpolate_df_from_dict(
             month_salary_k_per_age,
-            min_idx=0,
+            min_idx=current_age,
             max_idx=life_exp_years,
             col_name='salary_k'
-        ).fillna(0)  # Initial and last years assume 0?
+        ).fillna(0)  # Initial and last years assume 0?)
 
         cost_per_age_df = self.interpolate_df_from_dict(
             month_req_cost_k_per_age,
-            min_idx=0,
+            min_idx=current_age,
             max_idx=life_exp_years,
             col_name='req_cost'
         ).ffill()  # Assume continued at same level as last data point e.g. pension level
@@ -96,7 +96,7 @@ class Config:
         df['leak_multiplier'] = df['age'].map(leak_mult_per_age_df.to_dict()['leak_multiplier'])
 
         # Only include cumulation and compounding from current age
-        df = df.loc[df.index >= current_age]
+        df = df.loc[df['age'] >= current_age]
 
         df['years'] = np.arange(len(df))
         df['compound_interest'] = self.net_return_mult ** df['years']  # After infl and exist risk
@@ -165,6 +165,6 @@ def run_linear_optimization(conf: Config, figsize=(20, 5)):
     tot_given = round(np.sum(result.x), 3)
     lives_saved = int(round(tot_given / conf.save_qa_life_cost_k))
     conf.lives_saved = lives_saved
-    conf.sum_given_m = round(tot_given/1000, 1)
+    conf.sum_given_m = tot_given/1000
     conf.df['give_recommendation_m'] = np.array(result.x)/1000
     conf.plot_summary(figsize=figsize)
