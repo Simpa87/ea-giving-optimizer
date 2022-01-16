@@ -53,14 +53,14 @@ class Config:
 
         salary_per_age_df = self.interpolate_df_from_dict(
             month_salary_k_per_age,
-            min_idx=0,
+            min_idx=current_age,
             max_idx=life_exp_years,
             col_name='salary_k'
-        ).fillna(0)  # Initial and last years assume 0?
+        ).fillna(0)  # Initial and last years assume 0?)
 
         cost_per_age_df = self.interpolate_df_from_dict(
             month_req_cost_k_per_age,
-            min_idx=0,
+            min_idx=current_age,
             max_idx=life_exp_years,
             col_name='req_cost'
         ).ffill()  # Assume continued at same level as last data point e.g. pension level
@@ -96,7 +96,7 @@ class Config:
         df['leak_multiplier'] = df['age'].map(leak_mult_per_age_df.to_dict()['leak_multiplier'])
 
         # Only include cumulation and compounding from current age
-        df = df.loc[df.index >= current_age]
+        df = df.loc[df['age'] >= current_age]
 
         df['years'] = np.arange(len(df))
         df['compound_interest'] = self.net_return_mult ** df['years']  # After infl and exist risk
@@ -108,15 +108,21 @@ class Config:
         df = df.fillna(0).set_index('age')
         self.df = df
 
+        # Placeholders for result
+        self.sum_given_m = None
+        self.lives_saved = None
+
+
     def interpolate_df_from_dict(self, data_dict, min_idx, max_idx, col_name, step_size=1):
         return pd.DataFrame(data=data_dict.values(),
                             index=data_dict.keys(),
                             columns=[col_name]).reindex(list(range(min_idx, max_idx + 1, step_size))).interpolate()
 
     def plot_summary(self, figsize=(20, 4)):
-        f, axes = plt.subplots(1, 2, figsize=figsize)
+        fig, axes = plt.subplots(1, 2, figsize=figsize)
         self.df[['give_recommendation_m']].plot(title='Give recommendation [m]', ax=axes[0])
         self.df[['give_recommendation_m']].cumsum().plot(title='Cumulative give recommendation [m]', ax=axes[1])
+        return fig
 
 
 def get_A_ub(length: int, r: float = 1.1) -> np.ndarray:
@@ -131,7 +137,6 @@ def get_A_ub(length: int, r: float = 1.1) -> np.ndarray:
 def get_b_ub(disp: dict, r: float) -> list:
     b_ub = []
     i_min = min(disp.keys())
-    i_max = max(disp.keys())
     for age in disp.keys():
         res_list = [disp[age_] * r ** (age - age_ + 1) for age_ in range(i_min, age + 1)]
         res = sum(res_list)
@@ -140,6 +145,7 @@ def get_b_ub(disp: dict, r: float) -> list:
 
 
 def get_optimization_variables(conf: Config):
+
     # Unpack
     disp = conf.df.disposable_salary.to_dict()
     leak_mult = conf.df.leak_multiplier.to_dict()
@@ -158,8 +164,7 @@ def run_linear_optimization(conf: Config, figsize=(20, 5)):
     result = linprog(c, A_ub, b_ub)
     tot_given = round(np.sum(result.x), 3)
     lives_saved = int(round(tot_given / conf.save_qa_life_cost_k))
-    print(f"Quality adjusted lives saved: {lives_saved}")
-    print(f"\nSum given: {round(tot_given/1000, 1)} million")
+    conf.lives_saved = lives_saved
+    conf.sum_given_m = tot_given/1000
     conf.df['give_recommendation_m'] = np.array(result.x)/1000
     conf.plot_summary(figsize=figsize)
-

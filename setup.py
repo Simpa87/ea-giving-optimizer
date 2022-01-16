@@ -13,12 +13,13 @@ setup(
         'numpy',
         'pandas',
         'matplotlib',
-        'seaborn',
-        'scikit-learn',
         'ipython',
         'notebook',
         'scipy',
-        'pytest'
+        'pytest',
+        'plotly==5.4.0',
+        'cufflinks==0.17.3',
+        'chart-studio==1.1.0'
     ],
     tests_require=['nose'],
     zip_safe=False
