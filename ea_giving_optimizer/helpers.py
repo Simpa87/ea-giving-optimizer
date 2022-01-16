@@ -16,7 +16,7 @@ class Config:
                  save_qa_life_cost_k=35,
 
                  # Per age
-                 month_salary_k_per_age={30: 53, 40: 65, 45: 55, 65: 50, 66: 0},  # 0 at retire age
+                 month_salary_k_per_age={30: 53, 40: 65, 45: 55, 65: 50, 66: 10},  # Lower from retirement
                  month_req_cost_k_per_age={30: 20, 65: 20, 66: 20},
 
                  # Marginal taxation
@@ -56,7 +56,7 @@ class Config:
             min_idx=current_age,
             max_idx=life_exp_years,
             col_name='salary_k'
-        ).fillna(0)  # Initial and last years assume 0?)
+        ).ffill()  # Forward fills pension until life_expectancy
 
         cost_per_age_df = self.interpolate_df_from_dict(
             month_req_cost_k_per_age,
