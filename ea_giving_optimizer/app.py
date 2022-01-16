@@ -1,12 +1,6 @@
 import streamlit as st
 from ea_giving_optimizer.helpers import Config, run_linear_optimization
 
-# TODO:
-#  - Plot works but choose nicer format, maybe plotly for interactive and dark background?
-#  - Consider if refactor config into just a GivingOptimizer class that itself calls optimizer method
-#  - Add so that initial savings can be used
-#  - Containerize with docker-compose?
-#  - Maybe rates * 100 for % so easier to slide? Or just more decimalc on the slider itself
 
 
 st.title("""Effective Altruism Giving Optimizer""")
@@ -67,5 +61,8 @@ if submit:
     )
     run_linear_optimization(conf)
     st.write(f"Lives saved: {conf.lives_saved}, Sum given: {conf.sum_given_m :.2f} [m] ")
-    fig = conf.plot_summary()
-    st.pyplot(fig)
+
+    # Plotly graphs
+    height, width = 300, 850
+    st.plotly_chart(conf.plotly_summary(height=height, width=width))
+    st.plotly_chart(conf.plotly_summary_cum(height=height, width=width))

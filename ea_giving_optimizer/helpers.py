@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from scipy.optimize import linprog
-import matplotlib.pyplot as plt
+import plotly.express as px
 
 
 class Config:
@@ -11,7 +11,7 @@ class Config:
 
                  # General assumptions
                  current_age=30,
-                 current_savings_k=0,  # Currently not used
+                 current_savings_k=0,  # Currently not used  # TODO
                  life_exp_years=80,
                  save_qa_life_cost_k=35,
 
@@ -112,16 +112,19 @@ class Config:
         self.sum_given_m = None
         self.lives_saved = None
 
-
     def interpolate_df_from_dict(self, data_dict, min_idx, max_idx, col_name, step_size=1):
         return pd.DataFrame(data=data_dict.values(),
                             index=data_dict.keys(),
                             columns=[col_name]).reindex(list(range(min_idx, max_idx + 1, step_size))).interpolate()
 
-    def plot_summary(self, figsize=(20, 4)):
-        fig, axes = plt.subplots(1, 2, figsize=figsize)
-        self.df[['give_recommendation_m']].plot(title='Give recommendation [m]', ax=axes[0])
-        self.df[['give_recommendation_m']].cumsum().plot(title='Cumulative give recommendation [m]', ax=axes[1])
+    def plotly_summary(self, height=350, width=800):
+        fig = px.line(self.df[['give_recommendation_m']])
+        fig.update_layout(height=height, width=width, title='Give recommendation per age [m]')
+        return fig
+
+    def plotly_summary_cum(self, height=350, width=800):
+        fig = px.line(self.df[['give_recommendation_m']].cumsum())
+        fig.update_layout(height=height, width=width, title='Cumulative give recommendation per age [m]')
         return fig
 
 
@@ -159,7 +162,7 @@ def get_optimization_variables(conf: Config):
     return c, A_ub, b_ub
 
 
-def run_linear_optimization(conf: Config, figsize=(20, 5)):
+def run_linear_optimization(conf: Config):
     c, A_ub, b_ub = get_optimization_variables(conf)
     result = linprog(c, A_ub, b_ub)
     tot_given = round(np.sum(result.x), 3)
@@ -167,4 +170,3 @@ def run_linear_optimization(conf: Config, figsize=(20, 5)):
     conf.lives_saved = lives_saved
     conf.sum_given_m = tot_given/1000
     conf.df['give_recommendation_m'] = np.array(result.x)/1000
-    conf.plot_summary(figsize=figsize)
