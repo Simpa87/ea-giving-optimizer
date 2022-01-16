@@ -37,19 +37,24 @@ class Config:
 
         # Assert Consistency
         assert all((0 <= v <= 1) for v in share_tax_per_k_salary.values())
+        assert max(share_tax_per_k_salary.keys()) >= max(month_salary_k_per_age.values()), \
+            'Maximum share tax doesnt cover span of salaries'
+        assert min(share_tax_per_k_salary.keys()) <= min(month_salary_k_per_age.values()), \
+            'Minimum share tax doesnt cover span of salaries'
         assert all((0 <= v <= 1) for v in leak_multiplier_per_age.values())
         assert life_exp_years > current_age
         assert -0.1 <= return_rate_after_inflation <= 0.3
         assert 0 <= existential_risk_discount_rate <= 0.99
 
-        if leak_multiplier_per_age is not None:
-            assert current_age == min(leak_multiplier_per_age.keys())
-            assert life_exp_years == max(leak_multiplier_per_age.keys())
-
         self.life_exp_years = life_exp_years
         self.save_qa_life_cost_k = save_qa_life_cost_k
         self.net_return_mult = 1 + return_rate_after_inflation - existential_risk_discount_rate
         assert 0.01 <= self.net_return_mult <= 2  # Return multiplier can be < 1 after existential risk
+
+        # Save for metadata e.g. prints on ffill
+        self.leak_multiplier_per_age = leak_multiplier_per_age
+        self.month_salary_k_per_age = month_salary_k_per_age
+        self.month_req_cost_k_per_age = month_req_cost_k_per_age
 
         salary_per_age_df = self.interpolate_df_from_dict(
             month_salary_k_per_age,
@@ -111,6 +116,17 @@ class Config:
         # Placeholders for result
         self.sum_given_m = None
         self.lives_saved = None
+
+    def get_ffill_note(self):
+
+        if (
+                max(self.leak_multiplier_per_age.keys()) < self.life_exp_years or
+                max(self.month_salary_k_per_age.keys()) < self.life_exp_years or
+                max(self.month_req_cost_k_per_age.keys()) < self.life_exp_year
+        ):
+            return "One or some dictionaries had a lower max age than life_exp, the last value will be forward-filled."
+        else:
+            return None
 
     def interpolate_df_from_dict(self, data_dict, min_idx, max_idx, col_name, step_size=1):
         return pd.DataFrame(data=data_dict.values(),

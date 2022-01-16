@@ -66,3 +66,7 @@ if submit:
     height, width = 300, 850
     st.plotly_chart(conf.plotly_summary(height=height, width=width))
     st.plotly_chart(conf.plotly_summary_cum(height=height, width=width))
+
+    ffill_note = conf.get_ffill_note()
+    if ffill_note is not None:
+        st.write(ffill_note)
