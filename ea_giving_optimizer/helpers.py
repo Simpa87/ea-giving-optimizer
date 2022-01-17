@@ -134,12 +134,22 @@ class Config:
                             columns=[col_name]).reindex(list(range(min_idx, max_idx + 1, step_size))).interpolate()
 
     def plotly_summary(self, height=350, width=800):
-        fig = px.line(self.df[['give_recommendation_m']])
+        plot_df = (self.df[['give_recommendation_m']].round(3).reset_index().rename(
+            columns={'age': 'Age', 'give_recommendation_m': 'Suggested Giving [m]'}
+        )
+        )
+        fig = px.line(plot_df, x='Age', y='Suggested Giving [m]')
         fig.update_layout(height=height, width=width, title='Give recommendation per age [m]')
         return fig
 
     def plotly_summary_cum(self, height=350, width=800):
-        fig = px.line(self.df[['give_recommendation_m']].cumsum())
+
+        plot_df = (self.df[['give_recommendation_m']].cumsum().round(3).reset_index().rename(
+            columns={'age': 'Age', 'give_recommendation_m': 'Cum. Suggested Giving [m]'}
+        )
+        )
+
+        fig = px.line(plot_df, x='Age', y='Cum. Suggested Giving [m]')
         fig.update_layout(height=height, width=width, title='Cumulative give recommendation per age [m]')
         return fig
 

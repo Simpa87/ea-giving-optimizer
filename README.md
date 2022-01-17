@@ -35,6 +35,11 @@ Having the virtualenv activated and being in the project directory, launch jupyt
 jupyter notebook
 ```
 
+## 4. If want to open the app / frontend
+```bash
+streamlit run ea_giving_optimizer/app.py
+```
+
 ## Optional - Set up pytest for unit tests in Pycharm
 - Having installed pytest from the dependencies, from the configuration panel up in the top right of Pycharm, select Edit configurations from the dropdown
 - Click the + sign to add a new configuration and go to Python tests --> pytest

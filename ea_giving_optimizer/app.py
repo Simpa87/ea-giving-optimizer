@@ -2,8 +2,8 @@ import streamlit as st
 from ea_giving_optimizer.helpers import Config, run_linear_optimization
 
 
-
 st.title("""Effective Altruism Giving Optimizer""")
+
 with st.form("input_assumptions", clear_on_submit=False):
 
     save_qa_life_cost_k = st.slider('Cost of saving a life [k] at full quality (e.g. roughly 3.5 k Euro or '
@@ -63,7 +63,7 @@ if submit:
     st.write(f"Lives saved: {conf.lives_saved}, Sum given: {conf.sum_given_m :.2f} [m] ")
 
     # Plotly graphs
-    height, width = 300, 850
+    height, width = 300, 750
     st.plotly_chart(conf.plotly_summary(height=height, width=width))
     st.plotly_chart(conf.plotly_summary_cum(height=height, width=width))
 
