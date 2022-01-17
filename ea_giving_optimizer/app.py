@@ -99,7 +99,7 @@ class Config:
             min_idx=min(leak_multiplier_per_age.keys()),
             max_idx=max(leak_multiplier_per_age.keys()),
             col_name='leak_multiplier',
-            )
+        )
 
         # Left join (map) it
         df['leak_multiplier'] = df['age'].map(leak_mult_per_age_df.to_dict()['leak_multiplier'])
@@ -132,7 +132,8 @@ class Config:
                 max(self.month_salary_k_per_age.keys()) < self.life_exp_years or
                 max(self.month_req_cost_k_per_age.keys()) < self.life_exp_year
         ):
-            return "One or some dictionaries had a lower max age than life_exp, the last value will be forward-filled."
+            return "One or some dictionaries had a lower max age than life_exp, the last value was " \
+                   "hence forward-filled."
         else:
             return None
 
@@ -219,11 +220,7 @@ with st.form("input_assumptions", clear_on_submit=False):
     life_exp_years = st.slider('Life expectency', min_value=15, max_value=200, value=80)
     current_savings_k = st.number_input('Current savings [k]', min_value=0, max_value=1000000, value=0)
     return_rate_after_inflation_percent = st.slider('Return rate after inflation [%]',
-                                            min_value=0.0, max_value=20.0, value=5.0, step=0.1)
-
-
-
-
+                                                    min_value=0.0, max_value=20.0, value=5.0, step=0.1)
 
     existential_risk_discount_rate_percent = st.slider('Discount rate for cost of existential risk '
                                                        'and global suffering [%]. ',
@@ -235,12 +232,11 @@ with st.form("input_assumptions", clear_on_submit=False):
 
     month_salary_k_per_age = st.text_input('Month salary before tax [k] at different sample ages as a dictionary '
                                            '{age: salary}, they will be interpolated linearly',
-                                           value='{30: 40, 40: 50, 64: 55, 65: 10}')
+                                           value='{30: 40, 40: 50, 64: 55, 66: 15}')
 
     month_req_cost_k_per_age = st.text_input('Required cost of living per month [k] per age as a dictionary '
-                                           '{age: cost}, they will be interpolated linearly - '
-                                           'example with retirement at 65: ',
-                                           value='{30: 18, 65: 20, 66: 17}')
+                                             '{age: cost}, they will be interpolated linearly',
+                                             value='{30: 18, 65: 20, 66: 15}')
 
     share_tax_per_k_salary = st.text_input('Enter share total tax at ranges that cover at least min and '
                                            'max salary [k] above and preferably some points in between as a dictionary'
