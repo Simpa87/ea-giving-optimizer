@@ -6,6 +6,7 @@ import numpy as np
 def get_dummy_conf(
         current_age=10,
         life_exp_years=15,
+        current_savings_k=0,
         month_salary_k_per_age=None,
         month_req_cost_k_per_age=None,
         share_tax_per_k_salary=None,
@@ -27,6 +28,7 @@ def get_dummy_conf(
     return Config(
         current_age=current_age,
         life_exp_years=life_exp_years,
+        current_savings_k=current_savings_k,
         month_salary_k_per_age=month_salary_k_per_age,
         month_req_cost_k_per_age=month_req_cost_k_per_age,
         share_tax_per_k_salary=share_tax_per_k_salary,
@@ -67,6 +69,7 @@ def test_optimization_sum():
 
     error_decimal_tolerance = 0.02
     months_per_year = 12
+    current_savings_k = np.random.uniform(low=3, high=10)
 
     d1 = np.random.uniform(low=3, high=10)
     d2 = np.random.uniform(low=3, high=10)
@@ -109,7 +112,8 @@ def test_optimization_sum():
         (d3 - c3) +
         (d4 - c4) +
         (d5 - c5) +
-        (d6 - c6)
+        (d6 - c6) +
+        current_savings_k / months_per_year  # No *12 on initial savings
     )
 
     is_success = conf.sum_given_m == pytest.approx(expected, error_decimal_tolerance)
