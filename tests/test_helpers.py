@@ -1,4 +1,4 @@
-from ea_giving_optimizer.helpers import get_b_ub, Config, run_linear_optimization
+from ea_giving_optimizer.app import Config, get_b_ub, run_linear_optimization
 import pytest
 import numpy as np
 
