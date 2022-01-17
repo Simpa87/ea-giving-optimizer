@@ -1,6 +1,9 @@
 # ea-giving-optimizer
-Tool for running scenarios with different assumptions (returns, discounting, leaking money) to see total lifetime giving.
-The idea is to be able to model trade-offs with different assumptions:
+Tool for running scenarios with different assumptions (returns, discounting, leaking money) to see total impact on lives saved over a lifetime.
+The idea is to be able to model trade-offs with different assumptions. The 
+app is online with interface at: https://share.streamlit.io/simoncelinder/ea-giving-optimizer/main/ea_giving_optimizer/app.py
+
+Example of assumptions that can be modelled:
 - Interest on money saved to give more later (stock market return etc.)
 - Cost of waiting
   - Existential risk compounding (nukes, global warming, AI, biotech etc.)

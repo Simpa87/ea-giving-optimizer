@@ -249,6 +249,9 @@ with st.form("input_assumptions", clear_on_submit=False):
                                             'without testament or with legal requirements on inheritence etc. ',
                                             value='{30: 0.95, 45: 0.9, 55: 0.80, 80: 0.5}')
 
+    url2 = ('https://github.com/simoncelinder/ea-giving-optimizer')
+    st.caption("Source code for this tool is available in git: [link](%s)" % url2)
+
     submit = st.form_submit_button('Run giving optimizer!')
 
 
