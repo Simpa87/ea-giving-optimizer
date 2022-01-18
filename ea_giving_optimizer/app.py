@@ -5,7 +5,7 @@ from plotly import express as px
 from scipy.optimize import linprog
 
 
-# # # # # # # # # # # # HELPERS WITHOUT DEPENDENCY TO MODULE # # # # # # # # # # # #
+# All helpers are put here since streamlit does not identify setup.py
 
 
 class Config:
@@ -207,15 +207,17 @@ def run_linear_optimization(conf: Config):
     conf.df['give_recommendation_m'] = np.array(result.x)/1000
 
 
-# # # # # # # # # # # # # # # # FRONTEND # # # # # # # # # # # # # # # #
-
-
 st.title("""Effective Altruism Giving Optimizer""")
 
 with st.form("input_assumptions", clear_on_submit=False):
 
-    save_qa_life_cost_k = st.slider('Cost of saving a life [k] at full quality (e.g. roughly 3.5 k Euro or '
-                                    '35 k SEK)', min_value=1, max_value=200, value=35)
+    save_qa_life_cost_k = st.slider('Cost of saving a life [k] at full quality (e.g. roughly $3000 - $4500 or '
+                                    '27 - 41 k SEK)', min_value=1, max_value=200, value=35)
+
+    givewell_url = ('https://www.givewell.org/charities/top-charities')
+    st.caption("If this is new to you, you may want to see evidence "
+               " for how effective charities can save lives: [link](%s)" % givewell_url)
+
     current_age = st.slider('Current age', min_value=15, max_value=120, value=30)
     life_exp_years = st.slider('Life expectency', min_value=15, max_value=200, value=80)
     current_savings_k = st.number_input('Current savings [k]', min_value=0, max_value=1000000, value=0)
@@ -279,12 +281,15 @@ if submit:
     )
     run_linear_optimization(conf)
     st.write(f"Lives saved: {conf.lives_saved}, Sum given: {conf.sum_given_m :.2f} [m] ")
+    ffill_note = conf.get_ffill_note()
+    if ffill_note is not None:
+        st.caption(ffill_note)
 
     # Plotly graphs
     height, width = 300, 750
     st.plotly_chart(conf.plotly_summary(height=height, width=width))
     st.plotly_chart(conf.plotly_summary_cum(height=height, width=width))
 
-    ffill_note = conf.get_ffill_note()
-    if ffill_note is not None:
-        st.write(ffill_note)
+    # Lives saved as person symbols
+    st.write(f'Lives saved at full quality of life visualized as people')
+    st.write('👤 ' * conf.lives_saved)
