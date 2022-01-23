@@ -271,6 +271,9 @@ with st.form("input_assumptions", clear_on_submit=False):
                   maximize number of lives saved, but needs to be combined with other perspectives. 
                   For example, recurring giving can help us stay engaged in doing good and inspire 
                   others to give, even out donation flows to charities etc.""")
+    st.caption("If you get error messages when running, it is likely due to invalid data in the input fields. "
+               "You can always reload the browser to rerun with the default values, then change them step by step "
+               "and check everything works.")
 
     code_git = ('https://github.com/simoncelinder/ea-giving-optimizer')
     st.caption("The code for this tool is available in git: [link](%s)" % code_git)
