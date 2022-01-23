@@ -207,7 +207,18 @@ def run_linear_optimization(conf: Config):
     conf.df['give_recommendation_m'] = np.array(result.x)/1000
 
 
-st.title("""Effective Altruism Giving Optimizer""")
+st.title("""Explore how many lives you can save over your lifetime""")
+
+ea_intro = ('https://www.youtube.com/watch?v=Diuv3XZQXyc')
+
+st.write("This is a tool for exploring how many lives you can save over your own lifetime by giving to the most "
+         "effective charities, and is inspired by the Effective Altruism movement, see: "
+         "[Intro Video](%s)" % ea_intro)
+st.write("More specifically, the purpose of the tool is to: ")
+st.write("1) Hopefully get you inspired and motivated about saving more lives")
+st.write("2) Explore how different assumptions like salary, compounding interest, discount rates, "
+         "and assumed future likelihood of actually giving would impact how many lives are saved, giving new "
+         "ideas and perspectives on how and when it might be best to give")
 
 with st.form("input_assumptions", clear_on_submit=False):
 
@@ -215,22 +226,25 @@ with st.form("input_assumptions", clear_on_submit=False):
                                     '27 - 41 k SEK)', min_value=1, max_value=200, value=35)
 
     givewell_url = ('https://www.givewell.org/charities/top-charities')
-    st.caption("If this is new to you, you may want to see evidence "
-               " for how effective charities can save lives: [link](%s)" % givewell_url)
+    st.caption("Cost of saving a life at full quality can be estimated from randomized controlled trials, "
+               " see for example [GiveWell top charities](%s)" % givewell_url)
 
     current_age = st.slider('Current age', min_value=15, max_value=120, value=30)
     life_exp_years = st.slider('Life expectency', min_value=15, max_value=200, value=80)
     current_savings_k = st.number_input('Current savings [k]', min_value=0, max_value=1000000, value=0)
     return_rate_after_inflation_percent = st.slider('Return rate after inflation [%]',
-                                                    min_value=0.0, max_value=20.0, value=5.0, step=0.1)
+                                                    min_value=0.0, max_value=20.0, value=3.0, step=0.1)
 
     existential_risk_discount_rate_percent = st.slider('Discount rate for cost of existential risk '
                                                        'and global suffering [%]. ',
-                                                       min_value=0.0, max_value=10.0, value=0.2, step=0.01)
+                                                       min_value=0.0, max_value=10.0, value=3.0, step=0.01)
 
-    url = ('https://forum.effectivealtruism.org/posts/3fmcNMrR8cktLnoYk/' +
-           'giving-now-vs-later-for-existential-risk-an-initial-approach')
-    st.caption("Note: Yearly discount rate for x-risk ≈ rate of extinction according to [link](%s)" % url)
+    x_risk_derivation = ('https://forum.effectivealtruism.org/posts/3fmcNMrR8cktLnoYk/' +
+                         'giving-now-vs-later-for-existential-risk-an-initial-approach')
+    st.caption("Existential risk: Yearly discount rate for existential risk ≈ rate of extinction according to this "
+               "[x-risk derivation](%s)" % x_risk_derivation)
+    st.caption("Global suffering: The discount rate might be related to the growth rate of developing countries, "
+               "suggesting it might be more expensive to save lives in the future.")
 
     month_salary_k_per_age = st.text_input('Month salary before tax [k] at different sample ages as a dictionary '
                                            '{age: salary}, they will be interpolated linearly',
@@ -251,10 +265,15 @@ with st.form("input_assumptions", clear_on_submit=False):
                                             'without testament or with legal requirements on inheritence etc. ',
                                             value='{30: 0.95, 45: 0.9, 55: 0.80, 80: 0.5}')
 
-    url2 = ('https://github.com/simoncelinder/ea-giving-optimizer')
-    st.caption("Source code for this tool is available in git: [link](%s)" % url2)
-
     submit = st.form_submit_button('Run giving optimizer!')
+
+    st.caption("""The tool uses linear optimization to find the presumed 'optimal' giving at each age of your life to 
+                  maximize number of lives saved, but needs to be combined with other perspectives. 
+                  For example, recurring giving can help us stay engaged in doing good and inspire 
+                  others to give, even out donation flows to charities etc.""")
+
+    code_git = ('https://github.com/simoncelinder/ea-giving-optimizer')
+    st.caption("The code for this tool is available in git: [link](%s)" % code_git)
 
 
 if submit:
