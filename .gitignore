@@ -128,3 +128,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Other
+/ea_giving_optimizer/local_notebooks/
