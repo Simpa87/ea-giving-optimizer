@@ -1,41 +1,10 @@
-from ea_giving_optimizer.app import Config, get_b_ub, run_linear_optimization
+from ea_giving_optimizer.helpers import (
+    get_b_ub,
+    run_linear_optimization,
+    get_dummy_conf
+)
 import pytest
 import numpy as np
-
-
-def get_dummy_conf(
-        current_age=10,
-        life_exp_years=15,
-        current_savings_k=0,
-        month_salary_k_per_age=None,
-        month_req_cost_k_per_age=None,
-        share_tax_per_k_salary=None,
-        return_rate_after_inflation=0.0,
-        existential_risk_discount_rate=0.00,
-        leak_multiplier_per_age=None,
-):
-
-    # Avoid mutable default args
-    if month_salary_k_per_age is None:
-        month_salary_k_per_age = {10: 10, 15: 10}
-    if month_req_cost_k_per_age is None:
-        month_req_cost_k_per_age = {10: 5, 15: 5}
-    if share_tax_per_k_salary is None:
-        share_tax_per_k_salary = {0: 0, 1000: 0}
-    if leak_multiplier_per_age is None:
-        leak_multiplier_per_age = {10: 1, 15: 1}
-
-    return Config(
-        current_age=current_age,
-        life_exp_years=life_exp_years,
-        current_savings_k=current_savings_k,
-        month_salary_k_per_age=month_salary_k_per_age,
-        month_req_cost_k_per_age=month_req_cost_k_per_age,
-        share_tax_per_k_salary=share_tax_per_k_salary,
-        return_rate_after_inflation=return_rate_after_inflation,
-        existential_risk_discount_rate=existential_risk_discount_rate,
-        leak_multiplier_per_age=leak_multiplier_per_age,
-    )
 
 
 def test_get_b_ub():
@@ -119,5 +88,38 @@ def test_optimization_sum():
     is_success = conf.sum_given_m == pytest.approx(expected, error_decimal_tolerance)
     print(expected, conf.sum_given_m)
 
-    assert is_success, (f"Too big discrepancy between expected optimization result and actual, "
-              f"expected = {round(expected, 3)}, actual = {conf.sum_given_m}")
+    assert is_success, (
+        f"Too big discrepancy between expected optimization result and actual, "
+        f"expected = {round(expected, 3)}, actual = {conf.sum_given_m}"
+    )
+
+
+def test_optimization_sum_simple_leaking():
+
+    # Testing same multiplier gets distributed across years
+    error_decimal_tolerance = 0.001
+    months_per_year = 12
+    leak_multiplier = np.random.uniform(low=0, high=1)
+
+    # Salary defaults to 10 k and costs to 5 k for each year
+    net_savings_per_month_k = 5
+    years_in_period = 6
+    net_savings_per_year_k = net_savings_per_month_k * months_per_year
+    net_savings_tot_k = net_savings_per_year_k * years_in_period
+    expected = net_savings_tot_k / 1000 * leak_multiplier
+
+    conf = get_dummy_conf(
+        leak_multiplier_per_age={
+            10: leak_multiplier,
+            15: leak_multiplier,
+        },
+    )
+
+    run_linear_optimization(conf)
+    is_success = conf.sum_given_m == pytest.approx(expected, error_decimal_tolerance)
+    print(expected, conf.sum_given_m)
+
+    assert is_success, (
+        f"Too big discrepancy between expected optimization result and actual, "
+        f"expected = {round(expected, 3)}, actual = {conf.sum_given_m}"
+    )
