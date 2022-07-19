@@ -12,9 +12,10 @@ st.write("This is a tool for exploring how many lives you can save over your own
          "[Intro Video](%s)" % ea_intro)
 st.write("More specifically, the purpose of the tool is to: ")
 st.write("1) Hopefully get you inspired and motivated about saving more lives")
-st.write("2) Explore how different assumptions like salary, compounding interest, discount rates, "
-         "and assumed future likelihood of actually giving would impact how many lives are saved, giving new "
-         "ideas and perspectives on how and when it might be best to give")
+st.write("2) Explore how different assumptions impact *when* it is best to give to save most lives. "
+         "Assumptions include salary at different age, return on the stock market, discount rate for waiting to give, "
+         "and assumed future likelihood of *actually* giving. This might give rise to new "
+         "ideas and perspectives on *when* it might be best to give to charity, and how to *ensure* it's done.")
 
 with st.form("input_assumptions", clear_on_submit=False):
 
@@ -28,7 +29,7 @@ with st.form("input_assumptions", clear_on_submit=False):
     current_age = st.slider('Current age', min_value=15, max_value=120, value=30)
     life_exp_years = st.slider('Life expectency', min_value=15, max_value=200, value=80)
     current_savings_k = st.number_input('Current savings [k]', min_value=0, max_value=1000000, value=0)
-    return_rate_after_inflation_percent = st.slider('Return rate after inflation [%]',
+    return_rate_after_inflation_percent = st.slider('Stock market return rate after inflation [%]',
                                                     min_value=0.0, max_value=20.0, value=3.0, step=0.1)
 
     existential_risk_discount_rate_percent = st.slider('Discount rate for cost of existential risk '
@@ -54,7 +55,7 @@ with st.form("input_assumptions", clear_on_submit=False):
                                            'max salary [k] above and preferably some points in between as a dictionary'
                                            ', {salary: share_tax}, it will be interpolated linearly (can be found '
                                            ' in various salary-after-tax calculators online)',
-                                           value='{10: 0.18, 20: 0.2, 30: 0.2, 40: 0.225, 50: 0.26, 60: 0.3}')
+                                           value='{10: 0.18, 20: 0.2, 30: 0.2, 40: 0.225, 50: 0.26, 60: 0.3, 100: 0.38}')
 
     leak_multiplier_per_age = st.text_input('Enter expected leaking factor (1 = no leaking) at different ages as a dictionary '
                                             'leaking money to other causes like borrowing to relatives or passing away '
@@ -70,6 +71,9 @@ with st.form("input_assumptions", clear_on_submit=False):
     st.caption("If you get error messages when running, it is likely due to invalid data in the input fields. "
                "You can always reload the browser to rerun with the default values, then change them step by step "
                "and check everything works.")
+    st.caption("When the stock market return is higher than the discount rate, the tool will generally favour "
+               "waiting to give, and conversely, when the discount rate is higher it will generally suggest giving "
+               "as much as possible straight way, though this also depends on assumptions about the leaking factor.")
 
     code_git = ('https://github.com/simoncelinder/ea-giving-optimizer')
     st.caption("The code for this tool is available in git: [link](%s)" % code_git)
