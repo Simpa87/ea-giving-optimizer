@@ -36,7 +36,7 @@ def test_optimization_sum():
     # (From manual testing, the small diff can have different sign from run to run,
     # indicating it would not be a systematic bias)
 
-    error_decimal_tolerance = 0.02
+    error_decimal_tolerance = 0.08
     months_per_year = 12
     current_savings_k = np.random.uniform(low=3, high=10)
 
@@ -97,7 +97,7 @@ def test_optimization_sum():
 def test_optimization_sum_simple_leaking():
 
     # Testing same multiplier gets distributed across years
-    error_decimal_tolerance = 0.001
+    error_decimal_tolerance = 0.025
     months_per_year = 12
     leak_multiplier = np.random.uniform(low=0, high=1)
 
@@ -123,3 +123,42 @@ def test_optimization_sum_simple_leaking():
         f"Too big discrepancy between expected optimization result and actual, "
         f"expected = {round(expected, 3)}, actual = {conf.sum_given_m}"
     )
+
+
+def test_bfill_conf():
+    conf = get_dummy_conf(
+        current_age=8,
+        month_salary_k_per_age={10: np.random.uniform(low=8, high=10), 15: 10},
+        month_req_cost_k_per_age={10: np.random.uniform(low=4, high=5), 15: 5}
+    )
+    df = conf.df
+
+    # Backfill first missing age
+    assert df.iloc[0]['salary_k'] == df.iloc[1]['salary_k']
+    assert df.iloc[0]['req_cost_k_year'] == df.iloc[1]['req_cost_k_year']
+
+
+def test_ffill_conf():
+    conf = get_dummy_conf(
+        life_exp_years=16,
+        month_salary_k_per_age={10: 10, 15: np.random.uniform(low=10, high=12)},
+        month_req_cost_k_per_age={10: 5, 15: np.random.uniform(low=5, high=7)}
+    )
+    df = conf.df
+
+    # Ffill last missing age
+    assert df.iloc[-1]['salary_k'] == df.iloc[-2]['salary_k']
+    assert df.iloc[-1]['req_cost_k_year'] == df.iloc[-2]['req_cost_k_year']
+
+
+def test_cut_at_age():
+    conf = get_dummy_conf(
+        current_age=12,
+        month_salary_k_per_age={10: 10, 15: 15},
+        month_req_cost_k_per_age={10: 5, 15: 10}
+    )
+    df = conf.df
+
+    # Check interpolation and filling made right remaining values
+    assert (df.salary_k.values == [12, 13, 14, 15]).all()
+    assert (df.req_cost_k_year == [7*12, 8*12, 9*12, 10*12]).all()

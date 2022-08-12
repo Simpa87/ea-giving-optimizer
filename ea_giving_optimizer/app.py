@@ -19,8 +19,8 @@ st.write("2) Explore how different assumptions impact *when* it is best to give 
 
 with st.form("input_assumptions", clear_on_submit=False):
 
-    save_qa_life_cost_k = st.slider('Cost of saving a life [k] at full quality (e.g. roughly $3000 - $4500 or '
-                                    '27 - 41 k SEK)', min_value=1, max_value=200, value=35)
+    save_qa_life_cost_k = st.slider('Cost of saving a life at full quality in USD (e.g. roughly $3000 - $4500',
+                                    min_value=1000, max_value=6000, value=3500)/1000
 
     givewell_url = ('https://www.givewell.org/charities/top-charities')
     st.caption("Cost of saving a life at full quality can be estimated from randomized controlled trials, "
@@ -28,9 +28,9 @@ with st.form("input_assumptions", clear_on_submit=False):
 
     current_age = st.slider('Current age', min_value=15, max_value=120, value=30)
     life_exp_years = st.slider('Life expectency', min_value=15, max_value=200, value=80)
-    current_savings_k = st.number_input('Current savings [k]', min_value=0, max_value=1000000, value=0)
+    current_savings_k = st.number_input('Current savings', min_value=0, max_value=100000000000, value=0)/1000
     return_rate_after_inflation_percent = st.slider('Stock market return rate after inflation [%]',
-                                                    min_value=0.0, max_value=20.0, value=3.0, step=0.1)
+                                                    min_value=0.0, max_value=20.0, value=5.0, step=0.1)
 
     existential_risk_discount_rate_percent = st.slider('Discount rate for cost of existential risk '
                                                        'and global suffering [%]. ',
@@ -43,24 +43,27 @@ with st.form("input_assumptions", clear_on_submit=False):
     st.caption("Global suffering: The discount rate might be related to the growth rate of developing countries, "
                "suggesting it might be more expensive to save lives in the future.")
 
-    month_salary_k_per_age = st.text_input('Month salary before tax [k] at different sample ages as a dictionary '
+    month_salary_k_per_age = st.text_input('Month salary in USD before tax at different sample ages as a dictionary '
                                            '{age: salary}, they will be interpolated linearly',
-                                           value='{30: 40, 40: 50, 64: 55, 66: 15}')
+                                           value='{30: 4000, 40: 5000, 64: 5500, 66: 1500}')
 
-    month_req_cost_k_per_age = st.text_input('Required cost of living per month [k] per age as a dictionary '
+    month_req_cost_k_per_age = st.text_input('Required cost of living per month per age as a dictionary '
                                              '{age: cost}, they will be interpolated linearly',
-                                             value='{30: 18, 65: 20, 66: 15}')
+                                             value='{30: 1800, 65: 2000, 66: 1500}')/1000
 
     share_tax_per_k_salary = st.text_input('Enter share total tax at ranges that cover at least min and '
-                                           'max salary [k] above and preferably some points in between as a dictionary'
-                                           ', {salary: share_tax}, it will be interpolated linearly (can be found '
-                                           ' in various salary-after-tax calculators online)',
-                                           value='{10: 0.18, 20: 0.2, 30: 0.2, 40: 0.225, 50: 0.26, 60: 0.3, 100: 0.38}')
+                                           'max salary per month above and preferably some points in between as a '
+                                           'dictionary, {salary: share_tax}, it will be interpolated linearly '
+                                           '(can be found in various salary-after-tax calculators online)',
+                                           value='{1000: 0.18, 2000: 0.2, 3000: 0.2, 4000: 0.225, '
+                                                 '5000: 0.26, 6000: 0.3, 10000: 0.38}')
 
-    leak_multiplier_per_age = st.text_input('Enter expected leaking factor (1 = no leaking) at different ages as a dictionary '
-                                            'leaking money to other causes like borrowing to relatives or passing away '
-                                            'without testament or with legal requirements on inheritence etc. ',
-                                            value='{30: 0.95, 45: 0.9, 55: 0.80, 80: 0.5}')
+    implementation_factor_per_age = st.text_input('Enter expected implementation factor at different ages as a dictionary '
+                                            'for example capturing leaking money to other causes like borrowing '
+                                            'to relatives or passing away without testament or with legal '
+                                            'requirements on inheritence etc. 1 => all money would go to charity'
+                                            'when giving at that age, 0.5 => only 50% would give to charity etc.',
+                                                  value='{30: 1, 45: 1, 55: 0.90, 80: 0.5}')
 
     submit = st.form_submit_button('Run giving optimizer!')
 
@@ -84,7 +87,7 @@ if submit:
     month_salary_k_per_age = eval(month_salary_k_per_age)
     share_tax_per_k_salary = eval(share_tax_per_k_salary)
     month_req_cost_k_per_age = eval(month_req_cost_k_per_age)
-    leak_multiplier_per_age = eval(leak_multiplier_per_age)
+    implementation_factor_per_age = eval(implementation_factor_per_age)
 
     return_rate_after_inflation = return_rate_after_inflation_percent / 100
     existential_risk_discount_rate = existential_risk_discount_rate_percent / 100
@@ -99,7 +102,7 @@ if submit:
         month_salary_k_per_age=month_salary_k_per_age,
         month_req_cost_k_per_age=month_req_cost_k_per_age,
         share_tax_per_k_salary=share_tax_per_k_salary,
-        leak_multiplier_per_age=leak_multiplier_per_age
+        leak_multiplier_per_age=implementation_factor_per_age
     )
     run_linear_optimization(conf)
     st.write(f"Lives saved: {conf.lives_saved}, Sum given: {conf.sum_given_m :.2f} [m] ")
