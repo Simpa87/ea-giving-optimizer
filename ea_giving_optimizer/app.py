@@ -72,7 +72,7 @@ with st.form("input_assumptions", clear_on_submit=False):
         'for example capturing leaking money to other causes like borrowing '
         'to relatives or passing away without testament or with legal '
         'requirements on inheritence etc. 1 => all money would go to charity '
-        'when giving at that age, 0.5 => only 50% would give to charity etc.',
+        'when giving at that age, 0.5 => only 50% would go to charity etc.',
         value='{30: 1, 45: 1, 55: 0.90, 80: 0.5}'
     )
     implementation_factor_per_age = eval(implementation_factor_per_age)
