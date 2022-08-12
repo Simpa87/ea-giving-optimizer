@@ -10,29 +10,29 @@ class Config:
                  # Just example data!
 
                  # General assumptions
-                 current_age=30,
-                 current_savings_k=0,
-                 life_exp_years=80,
-                 save_qa_life_cost_k=35,
+                 current_age: int = 30,
+                 current_savings_k: float = 0,
+                 life_exp_years: int = 80,
+                 save_qa_life_cost_k: float = 3500,
 
                  # Per age
-                 month_salary_k_per_age={30: 53, 40: 65, 45: 55, 65: 50, 66: 10},  # Lower from retirement
-                 month_req_cost_k_per_age={30: 20, 65: 20, 66: 20},
+                 month_salary_k_per_age: dict = {30: 4000, 40: 5000, 64: 5500, 66: 1500},  # Lower from retirement
+                 month_req_cost_k_per_age: dict = {30: 1800, 65: 2000, 66: 1500},
 
                  # Marginal taxation
-                 share_tax_per_k_salary={10: (1 - 8.2 / 10), 20: (1 - 16 / 20), 30: (1 - 24 / 30), 40: (1 - 31 / 40),
-                                         50: (1 - 37 / 50), 60: (1 - 42 / 60), 80000: (1 - 52 / 80)},
+                 share_tax_per_k_salary: dict = {10: (1 - 8.2 / 10), 20: (1 - 16 / 20), 30: (1 - 24 / 30), 40: (1 - 31 / 40),
+                                                 50: (1 - 37 / 50), 60: (1 - 42 / 60), 80000: (1 - 52 / 80)},
 
                  # Return on savings e.g. stock market rate
-                 return_rate_after_inflation=0.07,
+                 return_rate_after_inflation: float = 0.07,
 
                  # Cost of exponential risks compounding
-                 existential_risk_discount_rate=0.0023,
+                 existential_risk_discount_rate: float = 0.0023,
 
                  # Leaking money to other causes
                  # E.g. dying and 50% legal inheritance
                  # Note that this leakage is applied for a certain age for the total giving result for that age
-                 leak_multiplier_per_age={30: 0.95, 45: 0.8, 55: 0.75, 80: 0.5},
+                 leak_multiplier_per_age: dict = {30: 0.95, 45: 0.8, 55: 0.75, 80: 0.5},
                  ):
 
         # Assert Consistency
@@ -58,33 +58,38 @@ class Config:
 
         salary_per_age_df = self.interpolate_df_from_dict(
             month_salary_k_per_age,
-            min_idx=current_age,
-            max_idx=life_exp_years,
+            min_idx=min(month_salary_k_per_age.keys()),
+            max_idx=max(month_salary_k_per_age.keys()),
             col_name='salary_k'
-        ).ffill()  # Forward fills pension until life_expectancy
+        )
 
         cost_per_age_df = self.interpolate_df_from_dict(
-            month_req_cost_k_per_age,
-            min_idx=current_age,
-            max_idx=life_exp_years,
-            col_name='req_cost'
-        ).ffill()  # Assume continued at same level as last data point e.g. pension level
+                month_req_cost_k_per_age,
+                min_idx=min(month_req_cost_k_per_age.keys()),
+                max_idx=max(month_req_cost_k_per_age.keys()),
+                col_name='req_cost'
+            )
 
         salary_per_age_df.index.name = 'age'
-        salary_per_age_df = salary_per_age_df.round(0)  # For integer join
 
-        self.tax_per_salary_df = self.interpolate_df_from_dict(share_tax_per_k_salary,
-                                                               min_idx=min(share_tax_per_k_salary.keys()),
-                                                               max_idx=max(share_tax_per_k_salary.keys()),
-                                                               col_name='share_tax',
-                                                               step_size=1
-                                                               )
+        # Round for integer join
+        salary_per_age_df = salary_per_age_df.round(0)
+
+        self.tax_per_salary_df = self.interpolate_df_from_dict(
+            share_tax_per_k_salary,
+            min_idx=int(min(share_tax_per_k_salary.keys())),
+            max_idx=int(max(share_tax_per_k_salary.keys())),
+            col_name='share_tax',
+            step_size=1
+        )
 
         self.tax_per_salary_df.index.name = 'salary_k'
-        df = pd.merge(left=salary_per_age_df.reset_index(),
-                      right=self.tax_per_salary_df.reset_index(),
-                      on='salary_k',
-                      how='left')
+        df = pd.merge(
+            left=salary_per_age_df.reset_index(),
+            right=self.tax_per_salary_df.reset_index(),
+            on='salary_k',
+            how='left'
+        )
 
         # Left join (map) interpolated cost per age
         df['req_cost_k_year'] = df['age'].map(cost_per_age_df.to_dict()['req_cost']) * 12
@@ -100,7 +105,23 @@ class Config:
         # Left join (map) it
         df['leak_multiplier'] = df['age'].map(leak_mult_per_age_df.to_dict()['leak_multiplier'])
 
-        # Only include cumulation and compounding from current age
+
+        # Need to ffill and bfill after the join, which needs to initially be before cutting at "age"
+        # to capture start and stop values that might be outside bounds
+        df = self.ffill_bfill_cols(df)
+
+        # Reindex if current_age or death is outside bounds for other values
+        df = (
+            df
+            .set_index('age')
+            .reindex(list(range(current_age, life_exp_years + 1)))
+            .reset_index()
+        )
+
+        # Once again fill cols if age or death was outside bounds
+        df = self.ffill_bfill_cols(df)
+
+        # Can now filter df to only include values from current age
         df = df.loc[df['age'] >= current_age]
 
         df['years'] = np.arange(len(df))
@@ -114,48 +135,50 @@ class Config:
 
         df['disposable_salary'] = df['disposable_salary'].ffill()
 
-        df = df.fillna(0).set_index('age')
+        df = df.set_index('age')
         self.df = df
 
         # Placeholders for result
         self.sum_given_m = None
         self.lives_saved = None
 
-    def get_ffill_note(self):
+    def ffill_bfill_cols(self, df):
+        df = df.copy()
+        df['salary_k'] = df['salary_k'].ffill().bfill()
+        df['req_cost_k_year'] = df['req_cost_k_year'].ffill().bfill()
+        df['leak_multiplier'] = df['leak_multiplier'].ffill().bfill()
+        return df
 
-        if (
-                max(self.leak_multiplier_per_age.keys()) < self.life_exp_years or
-                max(self.month_salary_k_per_age.keys()) < self.life_exp_years or
-                max(self.month_req_cost_k_per_age.keys()) < self.life_exp_year
-        ):
-            return "One or some dictionaries had a lower max age than life_exp, the last value was " \
-                   "hence forward-filled."
-        else:
-            return None
 
     def interpolate_df_from_dict(self, data_dict, min_idx, max_idx, col_name, step_size=1):
-        return pd.DataFrame(data=data_dict.values(),
-                            index=data_dict.keys(),
-                            columns=[col_name]).reindex(list(range(min_idx, max_idx + 1, step_size))).interpolate()
+        return (
+            pd.DataFrame(
+                data=data_dict.values(),
+                index=data_dict.keys(),
+                columns=[col_name]
+            )
+            .reindex(list(range(min_idx, max_idx + 1, step_size)))
+            .interpolate(limit_area='inside')
+        )
 
     def plotly_summary(self, height=350, width=800):
-        plot_df = (self.df[['give_recommendation_m']].round(3).reset_index().rename(
-            columns={'age': 'Age', 'give_recommendation_m': 'Suggested Giving [m]'}
+        plot_df = (
+            self.df[['give_recommendation_k']].round(3).reset_index().rename(
+                columns={'age': 'Age', 'give_recommendation_k': 'Suggested Giving [k USD]'}
+            )
         )
-        )
-        fig = px.line(plot_df, x='Age', y='Suggested Giving [m]')
-        fig.update_layout(height=height, width=width, title='Give recommendation per age [m]')
+        fig = px.line(plot_df, x='Age', y='Suggested Giving [k USD]')
+        fig.update_layout(height=height, width=width, title='Give recommendation per age [thousand USD]')
         return fig
 
     def plotly_summary_cum(self, height=350, width=800):
-
-        plot_df = (self.df[['give_recommendation_m']].cumsum().round(3).reset_index().rename(
-            columns={'age': 'Age', 'give_recommendation_m': 'Cum. Suggested Giving [m]'}
+        plot_df = (
+            self.df[['give_recommendation_m']].cumsum().round(3).reset_index().rename(
+                columns={'age': 'Age', 'give_recommendation_m': 'Cum. Suggested Giving [m USD]'}
+            )
         )
-        )
-
-        fig = px.line(plot_df, x='Age', y='Cum. Suggested Giving [m]')
-        fig.update_layout(height=height, width=width, title='Cumulative give recommendation per age [m]')
+        fig = px.line(plot_df, x='Age', y='Cum. Suggested Giving [m USD]')
+        fig.update_layout(height=height, width=width, title='Cumulative give recommendation per age [million USD]')
         return fig
 
 
@@ -203,6 +226,7 @@ def run_linear_optimization(conf: Config):
     conf.lives_saved = lives_saved
     conf.sum_given_m = tot_given/1000
     conf.df['give_recommendation_m'] = np.array(leaking_adj_result)/1000
+    conf.df['give_recommendation_k'] = np.array(leaking_adj_result)
 
 
 def get_dummy_conf(
@@ -238,3 +262,16 @@ def get_dummy_conf(
         existential_risk_discount_rate=existential_risk_discount_rate,
         leak_multiplier_per_age=leak_multiplier_per_age,
     )
+
+
+def dict_values_to_thousands(original_dict: dict):
+    new_dict = original_dict.copy()
+    new_dict.update((k, v / 1000) for k, v in new_dict.items())
+    return new_dict
+
+
+def dict_keys_to_thousands(original_dict: dict):
+    new_dict = original_dict.copy()
+    for k in list(new_dict.keys()):
+        new_dict[k/1000] = new_dict.pop(k)
+    return new_dict
