@@ -77,8 +77,8 @@ class Config:
 
         self.tax_per_salary_df = self.interpolate_df_from_dict(
             share_tax_per_k_salary,
-            min_idx=min(share_tax_per_k_salary.keys()),
-            max_idx=max(share_tax_per_k_salary.keys()),
+            min_idx=int(min(share_tax_per_k_salary.keys())),
+            max_idx=int(max(share_tax_per_k_salary.keys())),
             col_name='share_tax',
             step_size=1
         )
@@ -149,17 +149,6 @@ class Config:
         df['leak_multiplier'] = df['leak_multiplier'].ffill().bfill()
         return df
 
-    def get_ffill_note(self):
-
-        if (
-                max(self.leak_multiplier_per_age.keys()) < self.life_exp_years or
-                max(self.month_salary_k_per_age.keys()) < self.life_exp_years or
-                max(self.month_req_cost_k_per_age.keys()) < self.life_exp_year
-        ):
-            return "One or some dictionaries had a lower max age than life_exp, the last value was " \
-                   "hence forward-filled."
-        else:
-            return None
 
     def interpolate_df_from_dict(self, data_dict, min_idx, max_idx, col_name, step_size=1):
         return (
@@ -173,23 +162,23 @@ class Config:
         )
 
     def plotly_summary(self, height=350, width=800):
-        plot_df = (self.df[['give_recommendation_m']].round(3).reset_index().rename(
-            columns={'age': 'Age', 'give_recommendation_m': 'Suggested Giving [m]'}
+        plot_df = (
+            self.df[['give_recommendation_k']].round(3).reset_index().rename(
+                columns={'age': 'Age', 'give_recommendation_k': 'Suggested Giving [k USD]'}
+            )
         )
-        )
-        fig = px.line(plot_df, x='Age', y='Suggested Giving [m]')
-        fig.update_layout(height=height, width=width, title='Give recommendation per age [m]')
+        fig = px.line(plot_df, x='Age', y='Suggested Giving [k USD]')
+        fig.update_layout(height=height, width=width, title='Give recommendation per age [thousand USD]')
         return fig
 
     def plotly_summary_cum(self, height=350, width=800):
-
-        plot_df = (self.df[['give_recommendation_m']].cumsum().round(3).reset_index().rename(
-            columns={'age': 'Age', 'give_recommendation_m': 'Cum. Suggested Giving [m]'}
+        plot_df = (
+            self.df[['give_recommendation_m']].cumsum().round(3).reset_index().rename(
+                columns={'age': 'Age', 'give_recommendation_m': 'Cum. Suggested Giving [m USD]'}
+            )
         )
-        )
-
-        fig = px.line(plot_df, x='Age', y='Cum. Suggested Giving [m]')
-        fig.update_layout(height=height, width=width, title='Cumulative give recommendation per age [m]')
+        fig = px.line(plot_df, x='Age', y='Cum. Suggested Giving [m USD]')
+        fig.update_layout(height=height, width=width, title='Cumulative give recommendation per age [million USD]')
         return fig
 
 
@@ -237,6 +226,7 @@ def run_linear_optimization(conf: Config):
     conf.lives_saved = lives_saved
     conf.sum_given_m = tot_given/1000
     conf.df['give_recommendation_m'] = np.array(leaking_adj_result)/1000
+    conf.df['give_recommendation_k'] = np.array(leaking_adj_result)
 
 
 def get_dummy_conf(
@@ -272,3 +262,16 @@ def get_dummy_conf(
         existential_risk_discount_rate=existential_risk_discount_rate,
         leak_multiplier_per_age=leak_multiplier_per_age,
     )
+
+
+def dict_values_to_thousands(original_dict: dict):
+    new_dict = original_dict.copy()
+    new_dict.update((k, v / 1000) for k, v in new_dict.items())
+    return new_dict
+
+
+def dict_keys_to_thousands(original_dict: dict):
+    new_dict = original_dict.copy()
+    for k in list(new_dict.keys()):
+        new_dict[k/1000] = new_dict.pop(k)
+    return new_dict

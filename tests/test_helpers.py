@@ -162,3 +162,25 @@ def test_cut_at_age():
     # Check interpolation and filling made right remaining values
     assert (df.salary_k.values == [12, 13, 14, 15]).all()
     assert (df.req_cost_k_year == [7*12, 8*12, 9*12, 10*12]).all()
+
+
+def test_current_savings():
+    savings_k = np.random.normal(10, 20)
+    conf_savings = get_dummy_conf(
+        current_age=12,
+        month_salary_k_per_age={10: 10, 15: 15},
+        month_req_cost_k_per_age={10: 5, 15: 10},
+        current_savings_k=savings_k
+    )
+    df_savings = conf_savings.df
+
+    conf = get_dummy_conf(
+        current_age=12,
+        month_salary_k_per_age={10: 10, 15: 15},
+        month_req_cost_k_per_age={10: 5, 15: 10},
+        current_savings_k=0
+    )
+    df = conf.df
+
+    assert df.disposable_salary.sum() + savings_k == df_savings.disposable_salary.sum()
+    assert df.disposable_salary.iloc[0] + savings_k == df_savings.disposable_salary.iloc[0]
