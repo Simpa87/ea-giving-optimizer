@@ -275,3 +275,14 @@ def dict_keys_to_thousands(original_dict: dict):
     for k in list(new_dict.keys()):
         new_dict[k/1000] = new_dict.pop(k)
     return new_dict
+
+
+def check_valid_keys(current_age, month_salary_k_per_age, month_req_cost_k_per_age, implementation_factor_per_age):
+    min_key = min(
+        list(month_salary_k_per_age.keys()) +
+        list(month_req_cost_k_per_age.keys())
+    )
+    if implementation_factor_per_age is not None:
+        min_key = min(min_key, min(implementation_factor_per_age.keys()))
+    is_keys_ok = current_age >= min_key
+    return is_keys_ok
