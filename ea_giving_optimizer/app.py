@@ -1,7 +1,13 @@
 import streamlit as st
 
 # Relative import rather than module import for Streamlit to work
-from helpers import Config, run_linear_optimization, dict_values_to_thousands, dict_keys_to_thousands
+from helpers import (
+    Config,
+    run_linear_optimization,
+    dict_values_to_thousands,
+    dict_keys_to_thousands,
+    check_valid_keys
+)
 
 st.title("""Explore how many lives you can save over your lifetime""")
 
@@ -88,34 +94,43 @@ with st.form("input_assumptions", clear_on_submit=False):
     st.caption("The code for this tool is available in git: [link](%s)" % code_git)
 
 
+
+
+
 if submit:
 
     return_rate_after_inflation = return_rate_after_inflation_percent / 100
     existential_risk_discount_rate = existential_risk_discount_rate_percent / 100
+    is_keys_ok = check_valid_keys(current_age, month_salary_k_per_age,
+                                  month_req_cost_k_per_age, implementation_factor_per_age)
 
-    conf = Config(
-        save_qa_life_cost_k=save_qa_life_cost_k,
-        current_age=current_age,
-        life_exp_years=life_exp_years,
-        current_savings_k=current_savings_k,
-        return_rate_after_inflation=return_rate_after_inflation,
-        existential_risk_discount_rate=existential_risk_discount_rate,
-        month_salary_k_per_age=month_salary_k_per_age,
-        month_req_cost_k_per_age=month_req_cost_k_per_age,
-        share_tax_per_k_salary=share_tax_per_k_salary,
-        leak_multiplier_per_age=implementation_factor_per_age
-    )
+    if not is_keys_ok:
+        st.write(f"Error: Current implementation does not support having current age be less than the "
+                 f"lowest age of the input data dictionaries. Please update the dictionary to start at a lower age or "
+                 f"set higher current age.")
 
-    run_linear_optimization(conf)
-    st.write(f"Lives saved: {conf.lives_saved}, Sum given: {conf.sum_given_m :.2f} million USD ")
+    else:
+        conf = Config(
+            save_qa_life_cost_k=save_qa_life_cost_k,
+            current_age=current_age,
+            life_exp_years=life_exp_years,
+            current_savings_k=current_savings_k,
+            return_rate_after_inflation=return_rate_after_inflation,
+            existential_risk_discount_rate=existential_risk_discount_rate,
+            month_salary_k_per_age=month_salary_k_per_age,
+            month_req_cost_k_per_age=month_req_cost_k_per_age,
+            share_tax_per_k_salary=share_tax_per_k_salary,
+            leak_multiplier_per_age=implementation_factor_per_age
+        )
 
-    # Lives saved as person symbols
-    st.write(f'Lives saved at full quality of life visualized as people')
-    st.write('👤 ' * conf.lives_saved)
+        run_linear_optimization(conf)
+        st.write(f"Lives saved: {conf.lives_saved}, Sum given: {conf.sum_given_m :.2f} million USD ")
 
-    # Plotly graphs
-    height, width = 300, 750
-    st.plotly_chart(conf.plotly_summary(height=height, width=width))
-    st.plotly_chart(conf.plotly_summary_cum(height=height, width=width))
+        # Lives saved as person symbols
+        st.write(f'Lives saved at full quality of life visualized as people')
+        st.write('👤 ' * conf.lives_saved)
 
-
+        # Plotly graphs
+        height, width = 300, 750
+        st.plotly_chart(conf.plotly_summary(height=height, width=width))
+        st.plotly_chart(conf.plotly_summary_cum(height=height, width=width))
