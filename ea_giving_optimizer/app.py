@@ -28,7 +28,7 @@ with st.form("input_assumptions", clear_on_submit=False):
     save_qa_life_cost_k = st.slider('Cost of saving a life at full quality in USD (e.g. roughly $3000 - $4500)',
                                     min_value=1000, max_value=6000, value=3500)/1000
 
-    pre_post = st.selectbox('Will giving be pre-tax or post-tax?', ('Pre-tax', 'Post-tax'))
+    pre_post = st.selectbox('Will giving be pre-tax or post-tax?', ('Pre-tax', 'Post-tax'), index=1)
     is_giving_pretax = pre_post == 'Pre-tax'
 
     givewell_url = ('https://www.givewell.org/charities/top-charities')
