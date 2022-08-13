@@ -28,13 +28,17 @@ with st.form("input_assumptions", clear_on_submit=False):
     save_qa_life_cost_k = st.slider('Cost of saving a life at full quality in USD (e.g. roughly $3000 - $4500)',
                                     min_value=1000, max_value=6000, value=3500)/1000
 
+    pre_post = st.selectbox('Will giving be pre-tax or post-tax?', ('Pre-tax', 'Post-tax'))
+    is_giving_pretax = pre_post == 'Pre-tax'
+
     givewell_url = ('https://www.givewell.org/charities/top-charities')
     st.caption("Cost of saving a life at full quality can be estimated from randomized controlled trials, "
                " see for example [GiveWell top charities](%s)" % givewell_url)
 
     current_age = st.slider('Current age', min_value=15, max_value=120, value=30)
     life_exp_years = st.slider('Life expectency', min_value=15, max_value=200, value=80)
-    current_savings_k = st.number_input('Current savings [USD]', min_value=0, max_value=100000000000, value=0) / 1000
+    current_savings_k = st.number_input('Current savings [USD] after tax on profits', min_value=0,
+                                        max_value=100000000000, value=0) / 1000
     return_rate_after_inflation_percent = st.slider('Stock market return rate after inflation [%]',
                                                     min_value=0.0, max_value=20.0, value=3.0, step=0.1)
 
@@ -109,6 +113,7 @@ if submit:
     else:
         conf = Config(
             save_qa_life_cost_k=save_qa_life_cost_k,
+            is_giving_pretax=is_giving_pretax,
             current_age=current_age,
             life_exp_years=life_exp_years,
             current_savings_k=current_savings_k,
