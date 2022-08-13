@@ -22,6 +22,7 @@ st.write("2) Explore how different assumptions impact *when* it is best to give 
          "Assumptions include salary at different age, return on the stock market, discount rate for waiting to give, "
          "and assumed future likelihood of *actually* giving. This might give rise to new "
          "ideas and perspectives on *when* it might be best to give to charity, and how to *ensure* it's done.")
+st.caption("You can start with running the app with default values to get a sense of how it works!")
 
 with st.form("input_assumptions", clear_on_submit=False):
 
