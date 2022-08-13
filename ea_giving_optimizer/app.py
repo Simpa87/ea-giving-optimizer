@@ -94,6 +94,8 @@ with st.form("input_assumptions", clear_on_submit=False):
     st.caption("When the stock market return is higher than the discount rate, the tool will generally favour "
                "waiting to give, and conversely, when the discount rate is higher it will generally suggest giving "
                "as much as possible straight way, though this also depends on assumptions about the leaking factor.")
+    st.caption("A limitation of the pre-tax giving implementation is that in reality, you probably have to donate this "
+               "money straight away. But you can more or less simulate this by setting the stock market return to 0.")
 
     code_git = ('https://github.com/simoncelinder/ea-giving-optimizer')
     st.caption("The code for this tool is available in git: [link](%s)" % code_git)
