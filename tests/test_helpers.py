@@ -1,7 +1,7 @@
 from ea_giving_optimizer.helpers import (
     get_b_ub,
     run_linear_optimization,
-    get_dummy_conf
+    create_dummy_conf
 )
 import pytest
 import numpy as np
@@ -18,15 +18,15 @@ def test_get_b_ub():
 def test_optimization_general():
 
     # When positive interest and no cost of x-risk, should recommend giving everything last
-    conf = get_dummy_conf(return_rate_after_inflation=0.01)
+    conf = create_dummy_conf(return_rate_after_inflation=0.01)
     run_linear_optimization(conf)
     assert conf.df.iloc[-1]['give_recommendation_m'].round(1) == conf.df['give_recommendation_m'].sum().round(1)
 
     # When x-risk > interest, should recommend giving everything immediately per age
-    conf = get_dummy_conf(existential_risk_discount_rate=0.02, return_rate_after_inflation=0.01)
+    conf = create_dummy_conf(existential_risk_discount_rate=0.02, return_rate_after_inflation=0.01)
     run_linear_optimization(conf)
     assert (conf.df['give_recommendation_m'].round(2) ==
-            ((conf.df['disposable_salary']**conf.net_return_mult)/1000).round(2)).all()
+            ((conf.df['disposable_for_giving']**conf.net_return_mult)/1000).round(2)).all()
 
 
 def test_optimization_sum():
@@ -54,7 +54,7 @@ def test_optimization_sum():
     c5 = np.random.uniform(low=1, high=2)
     c6 = np.random.uniform(low=1, high=2)
 
-    conf = get_dummy_conf(
+    conf = create_dummy_conf(
         month_salary_k_per_age={
             10: d1,
             11: d2,
@@ -108,7 +108,7 @@ def test_optimization_sum_simple_leaking():
     net_savings_tot_k = net_savings_per_year_k * years_in_period
     expected = net_savings_tot_k / 1000 * leak_multiplier
 
-    conf = get_dummy_conf(
+    conf = create_dummy_conf(
         leak_multiplier_per_age={
             10: leak_multiplier,
             15: leak_multiplier,
@@ -126,7 +126,7 @@ def test_optimization_sum_simple_leaking():
 
 
 def test_bfill_conf():
-    conf = get_dummy_conf(
+    conf = create_dummy_conf(
         current_age=8,
         month_salary_k_per_age={10: np.random.uniform(low=8, high=10), 15: 10},
         month_req_cost_k_per_age={10: np.random.uniform(low=4, high=5), 15: 5}
@@ -139,7 +139,7 @@ def test_bfill_conf():
 
 
 def test_ffill_conf():
-    conf = get_dummy_conf(
+    conf = create_dummy_conf(
         life_exp_years=16,
         month_salary_k_per_age={10: 10, 15: np.random.uniform(low=10, high=12)},
         month_req_cost_k_per_age={10: 5, 15: np.random.uniform(low=5, high=7)}
@@ -152,7 +152,7 @@ def test_ffill_conf():
 
 
 def test_cut_at_age():
-    conf = get_dummy_conf(
+    conf = create_dummy_conf(
         current_age=12,
         month_salary_k_per_age={10: 10, 15: 15},
         month_req_cost_k_per_age={10: 5, 15: 10}
@@ -166,7 +166,7 @@ def test_cut_at_age():
 
 def test_current_savings():
     savings_k = np.random.normal(10, 20)
-    conf_savings = get_dummy_conf(
+    conf_savings = create_dummy_conf(
         current_age=12,
         month_salary_k_per_age={10: 10, 15: 15},
         month_req_cost_k_per_age={10: 5, 15: 10},
@@ -174,7 +174,7 @@ def test_current_savings():
     )
     df_savings = conf_savings.df
 
-    conf = get_dummy_conf(
+    conf = create_dummy_conf(
         current_age=12,
         month_salary_k_per_age={10: 10, 15: 15},
         month_req_cost_k_per_age={10: 5, 15: 10},
@@ -182,5 +182,63 @@ def test_current_savings():
     )
     df = conf.df
 
-    assert df.disposable_salary.sum() + savings_k == df_savings.disposable_salary.sum()
-    assert df.disposable_salary.iloc[0] + savings_k == df_savings.disposable_salary.iloc[0]
+    assert df.disposable_for_giving.sum() + savings_k == df_savings.disposable_for_giving.sum()
+    assert df.disposable_for_giving.iloc[0] + savings_k == df_savings.disposable_for_giving.iloc[0]
+
+
+def test_pretax_giving():
+
+    """
+    (salary_pretax - disposable_for_giving) * (1 - share_tax) = req_cost
+    <=> (salary_pretax - disposable_for_giving) = req_cost / (1 - share_tax)
+    <=> disposable_for_giving = salary_pretax - req_cost / (1 - share_tax)
+    """
+    share_tax = 0.2
+    # Constant for simplicity
+    conf = create_dummy_conf(
+        is_giving_pretax=True,
+        month_salary_k_per_age={10: 10, 15: 10},
+        month_req_cost_k_per_age={10: 5, 15: 5},
+        share_tax_per_k_salary={0: share_tax, 20: share_tax},
+    )
+    df = conf.df
+
+    assert (
+        (
+                df['disposable_for_giving'] == (df['salary_k_year'] - df['req_cost_k_year'] / (1 - df['share_tax']))
+                .round(0)
+        ).all()
+    )
+
+    run_linear_optimization(conf)
+    error_decimal_tolerance = 0.0001
+    expected = df['disposable_for_giving'].sum()
+    is_success = conf.sum_given_m * 1000 == pytest.approx(expected, error_decimal_tolerance)
+
+    assert is_success, (
+        f"Too big discrepancy between expected optimization result and actual, "
+        f"expected = {round(expected, 3)}, actual = {conf.sum_given_m}"
+    )
+
+    """ 
+    Ratio difference test:
+    Not is_giving_pretax: disposable_for_giving = salary_pretax * (1 - share_tax) - req_cost
+    is_giving_pretax: disposable_for_giving = salary_pretax - req_cost / (1 - share_tax)
+    ratio = (salary_pretax - req_cost / (1 - share_tax)) / (salary_pretax * (1 - share_tax) - req_cost) 
+    E.g. with values (10 - 5 / 0.8) / ((1 - 0.2) / (10 * 0.8 - 5) = 1.25
+    Making ratio = 1.25 = 1 / (1 - share_tax)
+    
+    Hardcoded reality check for more intuition:
+    Not pretax: 10 * 0.8 - disposable = 5 => disposable = 3
+    Pretax: (10 - disposable) * 0.8 = 5 => 3.75
+    Ratio: 3.75 / 3 = 1.25
+    """
+
+    conf_post_tax = create_dummy_conf(
+        is_giving_pretax=False,
+        month_salary_k_per_age={10: 10, 15: 10},
+        month_req_cost_k_per_age={10: 5, 15: 5},
+        share_tax_per_k_salary={0: share_tax, 20: share_tax},
+    )
+    run_linear_optimization(conf_post_tax)
+    assert conf_post_tax.sum_given_m / (1 - share_tax) == pytest.approx(conf.sum_given_m, 0.005)

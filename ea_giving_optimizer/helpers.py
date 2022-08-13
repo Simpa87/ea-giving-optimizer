@@ -10,29 +10,27 @@ class Config:
                  # Just example data!
 
                  # General assumptions
-                 current_age: int = 30,
-                 current_savings_k: float = 0,
-                 life_exp_years: int = 80,
-                 save_qa_life_cost_k: float = 3500,
+                 current_age: int,
+                 current_savings_k: float,
+                 life_exp_years: int,
+                 save_qa_life_cost_k: float,
+                 is_giving_pretax: bool,
 
                  # Per age
-                 month_salary_k_per_age: dict = {30: 4000, 40: 5000, 64: 5500, 66: 1500},  # Lower from retirement
-                 month_req_cost_k_per_age: dict = {30: 1800, 65: 2000, 66: 1500},
+                 month_salary_k_per_age: dict,
+                 month_req_cost_k_per_age: dict,
 
                  # Marginal taxation
-                 share_tax_per_k_salary: dict = {10: (1 - 8.2 / 10), 20: (1 - 16 / 20), 30: (1 - 24 / 30), 40: (1 - 31 / 40),
-                                                 50: (1 - 37 / 50), 60: (1 - 42 / 60), 80000: (1 - 52 / 80)},
+                 share_tax_per_k_salary: dict,
 
                  # Return on savings e.g. stock market rate
-                 return_rate_after_inflation: float = 0.07,
+                 return_rate_after_inflation: float,
 
                  # Cost of exponential risks compounding
-                 existential_risk_discount_rate: float = 0.0023,
+                 existential_risk_discount_rate: float,
 
                  # Leaking money to other causes
-                 # E.g. dying and 50% legal inheritance
-                 # Note that this leakage is applied for a certain age for the total giving result for that age
-                 leak_multiplier_per_age: dict = {30: 0.95, 45: 0.8, 55: 0.75, 80: 0.5},
+                 leak_multiplier_per_age: dict,
                  ):
 
         # Assert Consistency
@@ -49,6 +47,7 @@ class Config:
         self.life_exp_years = life_exp_years
         self.save_qa_life_cost_k = save_qa_life_cost_k
         self.net_return_mult = 1 + return_rate_after_inflation - existential_risk_discount_rate
+        self.is_giving_pretax = is_giving_pretax
         assert 0.01 <= self.net_return_mult <= 2  # Return multiplier can be < 1 after existential risk
 
         # Save for metadata e.g. prints on ffill
@@ -127,13 +126,13 @@ class Config:
         df['years'] = np.arange(len(df))
         df['compound_interest'] = self.net_return_mult ** df['years']  # After infl and exist risk
         df['salary_k_year'] = df['salary_k'] * 12
-        df['salary_k_year_after_tax'] = (df['salary_k_year'] * (1 - df['share_tax'])).round(0)
-        df['disposable_salary'] = (df['salary_k_year_after_tax'] - df['req_cost_k_year']).round(0)
+
+        df = self.calc_disposable_for_giving(df, is_giving_pretax)
 
         # Add current savings which are assumed already tax
-        df.loc[df['age'] == current_age, 'disposable_salary'] += current_savings_k
+        df.loc[df['age'] == current_age, 'disposable_for_giving'] += current_savings_k
 
-        df['disposable_salary'] = df['disposable_salary'].ffill()
+        df['disposable_for_giving'] = df['disposable_for_giving'].ffill()
 
         df = df.set_index('age')
         self.df = df
@@ -142,13 +141,23 @@ class Config:
         self.sum_given_m = None
         self.lives_saved = None
 
-    def ffill_bfill_cols(self, df):
+    @staticmethod
+    def calc_disposable_for_giving(df, is_giving_pretax):
+        df = df.copy()
+        if is_giving_pretax:
+            df['disposable_for_giving'] = (df['salary_k_year'] - df['req_cost_k_year'] / (1 - df['share_tax'])).round(0)
+        else:
+            df['salary_k_year_after_tax'] = (df['salary_k_year'] * (1 - df['share_tax'])).round(0)
+            df['disposable_for_giving'] = (df['salary_k_year_after_tax'] - df['req_cost_k_year']).round(0)
+        return df
+
+    @staticmethod
+    def ffill_bfill_cols(df):
         df = df.copy()
         df['salary_k'] = df['salary_k'].ffill().bfill()
         df['req_cost_k_year'] = df['req_cost_k_year'].ffill().bfill()
         df['leak_multiplier'] = df['leak_multiplier'].ffill().bfill()
         return df
-
 
     def interpolate_df_from_dict(self, data_dict, min_idx, max_idx, col_name, step_size=1):
         return (
@@ -204,7 +213,7 @@ def get_b_ub(disp: dict, r: float) -> list:
 def get_optimization_variables(conf: Config):
 
     # Unpack
-    disp = conf.df.disposable_salary.to_dict()
+    disp = conf.df.disposable_for_giving.to_dict()
     leak_mult = conf.df.leak_multiplier.to_dict()
     r = conf.net_return_mult
 
@@ -229,16 +238,18 @@ def run_linear_optimization(conf: Config):
     conf.df['give_recommendation_k'] = np.array(leaking_adj_result)
 
 
-def get_dummy_conf(
+def create_dummy_conf(
         current_age=10,
         life_exp_years=15,
         current_savings_k=0,
+        save_qa_life_cost_k=3500,
         month_salary_k_per_age=None,
         month_req_cost_k_per_age=None,
         share_tax_per_k_salary=None,
         return_rate_after_inflation=0.0,
         existential_risk_discount_rate=0.00,
         leak_multiplier_per_age=None,
+        is_giving_pretax=False,
 ):
 
     # Avoid mutable default args
@@ -261,6 +272,8 @@ def get_dummy_conf(
         return_rate_after_inflation=return_rate_after_inflation,
         existential_risk_discount_rate=existential_risk_discount_rate,
         leak_multiplier_per_age=leak_multiplier_per_age,
+        is_giving_pretax=is_giving_pretax,
+        save_qa_life_cost_k=save_qa_life_cost_k,
     )
 
 
