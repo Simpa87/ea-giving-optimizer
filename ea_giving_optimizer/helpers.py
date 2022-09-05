@@ -61,6 +61,7 @@ class Config:
             max_idx=max(month_salary_k_per_age.keys()),
             col_name='salary_k'
         )
+        salary_per_age_df.index.name = 'age'
 
         cost_per_age_df = self.interpolate_df_from_dict(
                 month_req_cost_k_per_age,
@@ -68,11 +69,6 @@ class Config:
                 max_idx=max(month_req_cost_k_per_age.keys()),
                 col_name='req_cost'
             )
-
-        salary_per_age_df.index.name = 'age'
-
-        # Round for integer join
-        salary_per_age_df = salary_per_age_df.round(0)
 
         self.tax_per_salary_df = self.interpolate_df_from_dict(
             share_tax_per_k_salary,
@@ -83,11 +79,14 @@ class Config:
         )
 
         self.tax_per_salary_df.index.name = 'salary_k'
-        df = pd.merge(
-            left=salary_per_age_df.reset_index(),
-            right=self.tax_per_salary_df.reset_index(),
-            on='salary_k',
-            how='left'
+        self.tax_per_salary_df = self.tax_per_salary_df.reset_index()
+        self.tax_per_salary_df['salary_k'] = self.tax_per_salary_df['salary_k'].astype(float)
+
+        join_key = 'salary_k'
+        df = pd.merge_asof(
+            left=salary_per_age_df.reset_index().sort_values(by=join_key),
+            right=self.tax_per_salary_df,
+            on=join_key,
         )
 
         # Left join (map) interpolated cost per age
