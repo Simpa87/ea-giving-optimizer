@@ -213,4 +213,4 @@ if submit:
         st.plotly_chart(conf.plotly_summary_cum(height=height, width=width))
 
         if has_reality_check:
-            st.dataframe(conf.df)
+            st.dataframe(conf.df.reset_index())
