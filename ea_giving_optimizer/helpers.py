@@ -169,16 +169,6 @@ class Config:
             .interpolate(limit_area='inside')
         )
 
-    def plotly_summary(self, height=350, width=800):
-        plot_df = (
-            self.df[['give_recommendation_k']].round(3).reset_index().rename(
-                columns={'age': 'Age', 'give_recommendation_k': 'Suggested Giving [k USD]'}
-            )
-        )
-        fig = px.line(plot_df, x='Age', y='Suggested Giving [k USD]')
-        fig.update_layout(height=height, width=width, title='Give recommendation per age [thousand USD]')
-        return fig
-
     def plotly_summary_cum(self, height=350, width=800):
         plot_df = (
             self.df[['give_recommendation_m']].cumsum().round(3).reset_index().rename(
@@ -186,7 +176,22 @@ class Config:
             )
         )
         fig = px.line(plot_df, x='Age', y='Cum. Suggested Giving [m USD]')
-        fig.update_layout(height=height, width=width, title='Cumulative give recommendation per age [million USD]')
+        fig.update_layout(
+            height=height, width=width, title='Cumulative suggested giving over your lifetime [million USD]'
+        )
+        return fig
+
+    def plotly_summary(self, height=350, width=800):
+        plot_df = (
+            self.df[['give_recommendation_k']].round(3).reset_index().rename(
+                columns={'age': 'Age', 'give_recommendation_k': 'Suggested Giving [k USD]'}
+            )
+        )
+        fig = px.line(plot_df, x='Age', y='Suggested Giving [k USD]')
+        fig.update_layout(
+            height=height, width=width,
+            title='Suggested giving each year of your life [thousand USD] (i.e. not cumulative)'
+        )
         return fig
 
 

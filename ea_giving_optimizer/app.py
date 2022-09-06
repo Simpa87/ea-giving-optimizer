@@ -57,8 +57,8 @@ with st.form("input_assumptions", clear_on_submit=False):
 
     current_age = st.slider('Current age', min_value=15, max_value=150, value=30)
     if not is_advanced:
-        age_of_pension = st.slider(
-            'Age of pension',
+        age_of_retirement = st.slider(
+            'Age of retirement',
             min_value=0, max_value=150, value=65
         )
     life_exp_years = st.slider('Life expectency', min_value=15, max_value=150, value=80)
@@ -96,9 +96,9 @@ with st.form("input_assumptions", clear_on_submit=False):
             min_value=0, max_value=100000000000, value=3500
         )/1000
         month_salary_k_per_age = constant_dict(current_age, life_exp_years, value=current_salary_k)
-        salary_increase_rate = st.slider('Salary increase [%] after inflation per year until pension', min_value=0.0,
+        salary_increase_rate = st.slider('Salary increase [%] after inflation per year until retirement', min_value=0.0,
                                          max_value=50.0, value=2.0, step=0.5) / 100
-        salary_after_pension_k = st.number_input('Monthly income after pension before tax in USD', min_value=0,
+        salary_after_retirement_k = st.number_input('Monthly income after retirement before tax in USD', min_value=0,
                                                  max_value=100000000000, value=1500) / 1000
 
         # TODO write unit test for this function
@@ -106,11 +106,11 @@ with st.form("input_assumptions", clear_on_submit=False):
             range(min(month_salary_k_per_age.keys()) + 1, max(month_salary_k_per_age.keys()) + 1),
             start=1
         ):
-            if age < age_of_pension:
+            if age < age_of_retirement:
                 # Recursively apply interest on previous salary
                 month_salary_k_per_age[age] = round(month_salary_k_per_age[age-1] * (1 + salary_increase_rate), 2)
             else:
-                month_salary_k_per_age[age] = salary_after_pension_k
+                month_salary_k_per_age[age] = salary_after_retirement_k
 
     if is_advanced:
         month_req_cost_k_per_age = st.text_input(
@@ -151,7 +151,7 @@ with st.form("input_assumptions", clear_on_submit=False):
     else:
         implementation_factor_per_age = constant_dict(current_age, life_exp_years, 1)
 
-    has_reality_check = st.checkbox('Display underlying dataset (e.g. reality check)')
+    has_reality_check = st.checkbox('Display underlying dataset')
 
     submit = st.form_submit_button('Run giving optimizer!')
 
@@ -209,8 +209,8 @@ if submit:
 
         # Plotly graphs
         height, width = 300, 750
-        st.plotly_chart(conf.plotly_summary(height=height, width=width))
         st.plotly_chart(conf.plotly_summary_cum(height=height, width=width))
+        st.plotly_chart(conf.plotly_summary(height=height, width=width))
 
         if has_reality_check:
             st.dataframe(conf.df.reset_index())
