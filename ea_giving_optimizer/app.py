@@ -59,7 +59,7 @@ with st.form("input_assumptions", clear_on_submit=False):
     if not is_advanced:
         age_of_retirement = st.slider(
             'Age of retirement',
-            min_value=0, max_value=150, value=65
+            min_value=15, max_value=150, value=65
         )
     life_exp_years = st.slider('Life expectency', min_value=15, max_value=150, value=80)
 
