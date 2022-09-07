@@ -303,3 +303,10 @@ def check_valid_keys(current_age, month_salary_k_per_age, month_req_cost_k_per_a
         min_key = min(min_key, min(implementation_factor_per_age.keys()))
     is_keys_ok = current_age >= min_key
     return is_keys_ok
+
+
+def constant_dict(current_age, life_exp_years, value) -> dict:
+    result_dict = {}
+    result_dict[current_age] = value
+    result_dict[life_exp_years] = value
+    return result_dict

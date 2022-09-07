@@ -6,8 +6,11 @@ from helpers import (
     run_linear_optimization,
     dict_values_to_thousands,
     dict_keys_to_thousands,
-    check_valid_keys
+    check_valid_keys,
+    constant_dict
 )
+
+# # # INTRO BEFORE FORM
 
 st.title("""Explore how many lives you can save over your lifetime""")
 
@@ -31,20 +34,25 @@ error_pretext = (
     )
 
 
-def constant_dict(current_age, life_exp_years, value) -> dict:
-    result_dict = {}
-    result_dict[current_age] = value
-    result_dict[life_exp_years] = value
-    return result_dict
+# # # TOGGLE MODES
 
+if 'is_advanced' not in st.session_state:
+    st.session_state.is_advanced = False
+
+
+def switch_mode():
+    st.session_state.is_advanced = not(st.session_state.is_advanced)
+
+
+other_mode = 'Advanced' if not(st.session_state.is_advanced) else 'Basic'
+st.button(f'Switch to {other_mode} mode', on_click=switch_mode)
+
+
+# # # MAIN FORM
 
 with st.form("input_assumptions", clear_on_submit=False):
     try:
-        basic_advanced = st.selectbox('Select Basic vs Advanced mode', ('Basic', 'Advanced'), index=0)
-        st.form_submit_button('Refresh form to change mode (Basic/Advanced)')
-        is_advanced = basic_advanced == 'Advanced'
-
-        if is_advanced:
+        if st.session_state.is_advanced:
             save_qa_life_cost_k = st.slider(
                 'Cost of saving a life at full quality in USD (e.g. roughly $3000 - $4500)',
                 min_value=1000, max_value=6000, value=3500
@@ -52,7 +60,7 @@ with st.form("input_assumptions", clear_on_submit=False):
         else:
             save_qa_life_cost_k = 3500/1000
 
-        if is_advanced:
+        if st.session_state.is_advanced:
             pre_post = st.selectbox('Will giving be pre-tax or post-tax?', ('Pre-tax', 'Post-tax'), index=1)
             is_giving_pretax = pre_post == 'Pre-tax'
         else:
@@ -63,14 +71,14 @@ with st.form("input_assumptions", clear_on_submit=False):
                    " see for example [GiveWell top charities](%s)" % givewell_url)
 
         current_age = st.slider('Current age', min_value=15, max_value=150, value=30)
-        if not is_advanced:
+        if not st.session_state.is_advanced:
             age_of_retirement = st.slider(
                 'Age of retirement',
                 min_value=15, max_value=150, value=65
             )
         life_exp_years = st.slider('Life expectency', min_value=15, max_value=150, value=80)
 
-        if is_advanced:
+        if st.session_state.is_advanced:
             current_savings_k = st.number_input(
                 'Current savings [USD] after tax on profits',
                 min_value=0, max_value=100000000000, value=0
@@ -92,7 +100,7 @@ with st.form("input_assumptions", clear_on_submit=False):
         st.caption("Global suffering: The discount rate might be related to the growth rate of developing countries, "
                    "suggesting it might be more expensive to save lives in the future.")
 
-        if is_advanced:
+        if st.session_state.is_advanced:
             month_salary_k_per_age = st.text_input('Month salary in USD before tax at different sample ages as a dictionary '
                                                    '{age: salary}, they will be interpolated linearly',
                                                    value='{30: 4000, 40: 5000, 64: 5500, 66: 1500}')
@@ -119,7 +127,7 @@ with st.form("input_assumptions", clear_on_submit=False):
                 else:
                     month_salary_k_per_age[age] = salary_after_retirement_k
 
-        if is_advanced:
+        if st.session_state.is_advanced:
             month_req_cost_k_per_age = st.text_input(
                 'Required cost of living per month per age as a dictionary '
                  '{age: cost}, they will be interpolated linearly',
@@ -134,7 +142,7 @@ with st.form("input_assumptions", clear_on_submit=False):
             month_req_cost_k_per_age = constant_dict(current_age, life_exp_years, value=cost_of_living_k)
 
         default_tax = {0: 0.18, 2000: 0.2, 3000: 0.2, 4000: 0.225, 5000: 0.26, 6000: 0.3, 10000: 0.38}
-        if is_advanced:
+        if st.session_state.is_advanced:
             share_tax_per_k_salary = st.text_input('Enter share total tax at ranges that cover at least min and '
                                                    'max salary per month above and preferably some points in between as a '
                                                    'dictionary, {salary: share_tax}, it will be interpolated linearly '
@@ -145,7 +153,7 @@ with st.form("input_assumptions", clear_on_submit=False):
             share_tax_per_k_salary = default_tax
             share_tax_per_k_salary = dict_keys_to_thousands(share_tax_per_k_salary)
 
-        if is_advanced:
+        if st.session_state.is_advanced:
             implementation_factor_per_age = st.text_input(
                 'Enter expected implementation factor at different ages as a dictionary '
                 'for example capturing leaking money to other causes like borrowing '
@@ -171,7 +179,7 @@ with st.form("input_assumptions", clear_on_submit=False):
                    "as much as possible straight way, though this also depends on assumptions about the implementation "
                    "factor when using Advanced mode.")
 
-        if is_advanced:
+        if st.session_state.is_advanced:
             st.caption("A limitation of the pre-tax giving implementation is that in reality, you probably have to donate this "
                        "money straight away. But you can more or less simulate this by setting the stock market return to 0.")
             code_git = ('https://github.com/simoncelinder/ea-giving-optimizer')
@@ -181,6 +189,8 @@ with st.form("input_assumptions", clear_on_submit=False):
         run = st.form_submit_button('Run giving optimizer!')
         st.write(f'{error_pretext}{e}')
 
+
+# # # RUN OPTIMIZATION
 
 if run:
 
