@@ -29,8 +29,8 @@ class Config:
                  # Cost of exponential risks compounding
                  existential_risk_discount_rate: float,
 
-                 # Leaking money to other causes
-                 leak_multiplier_per_age: dict,
+                 # E.g. leaking money to other causes
+                 implementation_factor_per_age: dict,
                  ):
 
         # Assert Consistency
@@ -39,7 +39,7 @@ class Config:
             'Maximum share tax doesnt cover span of salaries'
         assert min(share_tax_per_k_salary.keys()) <= min(month_salary_k_per_age.values()), \
             'Minimum share tax doesnt cover span of salaries'
-        assert all((0 <= v <= 1) for v in leak_multiplier_per_age.values())
+        assert all((0 <= v <= 1) for v in implementation_factor_per_age.values())
         assert life_exp_years > current_age
         assert -0.1 <= return_rate_after_inflation <= 0.3
         assert 0 <= existential_risk_discount_rate <= 0.99
@@ -51,7 +51,7 @@ class Config:
         assert 0.01 <= self.net_return_mult <= 2  # Return multiplier can be < 1 after existential risk
 
         # Save for metadata e.g. prints on ffill
-        self.leak_multiplier_per_age = leak_multiplier_per_age
+        self.implementation_factor_per_age = implementation_factor_per_age
         self.month_salary_k_per_age = month_salary_k_per_age
         self.month_req_cost_k_per_age = month_req_cost_k_per_age
 
@@ -61,6 +61,7 @@ class Config:
             max_idx=max(month_salary_k_per_age.keys()),
             col_name='salary_k'
         )
+        salary_per_age_df.index.name = 'age'
 
         cost_per_age_df = self.interpolate_df_from_dict(
                 month_req_cost_k_per_age,
@@ -68,11 +69,6 @@ class Config:
                 max_idx=max(month_req_cost_k_per_age.keys()),
                 col_name='req_cost'
             )
-
-        salary_per_age_df.index.name = 'age'
-
-        # Round for integer join
-        salary_per_age_df = salary_per_age_df.round(0)
 
         self.tax_per_salary_df = self.interpolate_df_from_dict(
             share_tax_per_k_salary,
@@ -83,26 +79,29 @@ class Config:
         )
 
         self.tax_per_salary_df.index.name = 'salary_k'
-        df = pd.merge(
-            left=salary_per_age_df.reset_index(),
-            right=self.tax_per_salary_df.reset_index(),
-            on='salary_k',
-            how='left'
+        self.tax_per_salary_df = self.tax_per_salary_df.reset_index()
+        self.tax_per_salary_df['salary_k'] = self.tax_per_salary_df['salary_k'].astype(float)
+
+        join_key = 'salary_k'
+        df = pd.merge_asof(
+            left=salary_per_age_df.reset_index().sort_values(by=join_key),
+            right=self.tax_per_salary_df,
+            on=join_key,
         )
 
         # Left join (map) interpolated cost per age
         df['req_cost_k_year'] = df['age'].map(cost_per_age_df.to_dict()['req_cost']) * 12
 
-        # Leaking multiplier per age
-        leak_mult_per_age_df = self.interpolate_df_from_dict(
-            leak_multiplier_per_age,
-            min_idx=min(leak_multiplier_per_age.keys()),
-            max_idx=max(leak_multiplier_per_age.keys()),
-            col_name='leak_multiplier',
+        # Implementation factor per age
+        impl_factor_per_age_df = self.interpolate_df_from_dict(
+            implementation_factor_per_age,
+            min_idx=min(implementation_factor_per_age.keys()),
+            max_idx=max(implementation_factor_per_age.keys()),
+            col_name='implementation_factor',
         )
 
         # Left join (map) it
-        df['leak_multiplier'] = df['age'].map(leak_mult_per_age_df.to_dict()['leak_multiplier'])
+        df['implementation_factor'] = df['age'].map(impl_factor_per_age_df.to_dict()['implementation_factor'])
 
 
         # Need to ffill and bfill after the join, which needs to initially be before cutting at "age"
@@ -156,7 +155,7 @@ class Config:
         df = df.copy()
         df['salary_k'] = df['salary_k'].ffill().bfill()
         df['req_cost_k_year'] = df['req_cost_k_year'].ffill().bfill()
-        df['leak_multiplier'] = df['leak_multiplier'].ffill().bfill()
+        df['implementation_factor'] = df['implementation_factor'].ffill().bfill()
         return df
 
     def interpolate_df_from_dict(self, data_dict, min_idx, max_idx, col_name, step_size=1):
@@ -170,16 +169,6 @@ class Config:
             .interpolate(limit_area='inside')
         )
 
-    def plotly_summary(self, height=350, width=800):
-        plot_df = (
-            self.df[['give_recommendation_k']].round(3).reset_index().rename(
-                columns={'age': 'Age', 'give_recommendation_k': 'Suggested Giving [k USD]'}
-            )
-        )
-        fig = px.line(plot_df, x='Age', y='Suggested Giving [k USD]')
-        fig.update_layout(height=height, width=width, title='Give recommendation per age [thousand USD]')
-        return fig
-
     def plotly_summary_cum(self, height=350, width=800):
         plot_df = (
             self.df[['give_recommendation_m']].cumsum().round(3).reset_index().rename(
@@ -187,7 +176,22 @@ class Config:
             )
         )
         fig = px.line(plot_df, x='Age', y='Cum. Suggested Giving [m USD]')
-        fig.update_layout(height=height, width=width, title='Cumulative give recommendation per age [million USD]')
+        fig.update_layout(
+            height=height, width=width, title='Cumulative suggested giving over your lifetime [million USD]'
+        )
+        return fig
+
+    def plotly_summary(self, height=350, width=800):
+        plot_df = (
+            self.df[['give_recommendation_k']].round(3).reset_index().rename(
+                columns={'age': 'Age', 'give_recommendation_k': 'Suggested Giving [k USD]'}
+            )
+        )
+        fig = px.line(plot_df, x='Age', y='Suggested Giving [k USD]')
+        fig.update_layout(
+            height=height, width=width,
+            title='Suggested giving each year of your life [thousand USD] (i.e. not cumulative)'
+        )
         return fig
 
 
@@ -214,28 +218,28 @@ def get_optimization_variables(conf: Config):
 
     # Unpack
     disp = conf.df.disposable_for_giving.to_dict()
-    leak_mult = conf.df.leak_multiplier.to_dict()
+    impl_factor = conf.df.implementation_factor.to_dict()
     r = conf.net_return_mult
 
     # Get vectors and matrices for optimization
-    c_leak = -1 * np.array(list(leak_mult.values()))
+    c_impl = -1 * np.array(list(impl_factor.values()))
     A_ub = get_A_ub(length=len(disp), r=r)
     b_ub = get_b_ub(disp=disp, r=r)
 
-    return c_leak, A_ub, b_ub
+    return c_impl, A_ub, b_ub
 
 
 def run_linear_optimization(conf: Config):
-    c_leak, A_ub, b_ub = get_optimization_variables(conf)
-    result_obj = linprog(c_leak, A_ub, b_ub)
+    c_impl, A_ub, b_ub = get_optimization_variables(conf)
+    result_obj = linprog(c_impl, A_ub, b_ub)
     result = result_obj.x
-    leaking_adj_result = result * c_leak * (-1)
-    tot_given = round(np.sum(leaking_adj_result), 3)
+    impl_adj_result = result * c_impl * (-1)
+    tot_given = round(np.sum(impl_adj_result), 3)
     lives_saved = int(round(tot_given / conf.save_qa_life_cost_k))
     conf.lives_saved = lives_saved
     conf.sum_given_m = tot_given/1000
-    conf.df['give_recommendation_m'] = np.array(leaking_adj_result)/1000
-    conf.df['give_recommendation_k'] = np.array(leaking_adj_result)
+    conf.df['give_recommendation_m'] = np.array(impl_adj_result)/1000
+    conf.df['give_recommendation_k'] = np.array(impl_adj_result)
 
 
 def create_dummy_conf(
@@ -248,7 +252,7 @@ def create_dummy_conf(
         share_tax_per_k_salary=None,
         return_rate_after_inflation=0.0,
         existential_risk_discount_rate=0.00,
-        leak_multiplier_per_age=None,
+        implementation_factor_per_age=None,
         is_giving_pretax=False,
 ):
 
@@ -259,8 +263,8 @@ def create_dummy_conf(
         month_req_cost_k_per_age = {10: 5, 15: 5}
     if share_tax_per_k_salary is None:
         share_tax_per_k_salary = {0: 0, 1000: 0}
-    if leak_multiplier_per_age is None:
-        leak_multiplier_per_age = {10: 1, 15: 1}
+    if implementation_factor_per_age is None:
+        implementation_factor_per_age = {10: 1, 15: 1}
 
     return Config(
         current_age=current_age,
@@ -271,7 +275,7 @@ def create_dummy_conf(
         share_tax_per_k_salary=share_tax_per_k_salary,
         return_rate_after_inflation=return_rate_after_inflation,
         existential_risk_discount_rate=existential_risk_discount_rate,
-        leak_multiplier_per_age=leak_multiplier_per_age,
+        implementation_factor_per_age=implementation_factor_per_age,
         is_giving_pretax=is_giving_pretax,
         save_qa_life_cost_k=save_qa_life_cost_k,
     )

@@ -94,30 +94,29 @@ def test_optimization_sum():
     )
 
 
-def test_optimization_sum_simple_leaking():
+def test_optimization_sum_simple_implementation_factor():
 
     # Testing same multiplier gets distributed across years
     error_decimal_tolerance = 0.025
     months_per_year = 12
-    leak_multiplier = np.random.uniform(low=0, high=1)
+    impl_factor = np.random.uniform(low=0, high=1)
 
     # Salary defaults to 10 k and costs to 5 k for each year
     net_savings_per_month_k = 5
     years_in_period = 6
     net_savings_per_year_k = net_savings_per_month_k * months_per_year
     net_savings_tot_k = net_savings_per_year_k * years_in_period
-    expected = net_savings_tot_k / 1000 * leak_multiplier
+    expected = net_savings_tot_k / 1000 * impl_factor
 
     conf = create_dummy_conf(
-        leak_multiplier_per_age={
-            10: leak_multiplier,
-            15: leak_multiplier,
+        implementation_factor_per_age={
+            10: impl_factor,
+            15: impl_factor,
         },
     )
 
     run_linear_optimization(conf)
     is_success = conf.sum_given_m == pytest.approx(expected, error_decimal_tolerance)
-    print(expected, conf.sum_given_m)
 
     assert is_success, (
         f"Too big discrepancy between expected optimization result and actual, "
@@ -182,8 +181,8 @@ def test_current_savings():
     )
     df = conf.df
 
-    assert df.disposable_for_giving.sum() + savings_k == df_savings.disposable_for_giving.sum()
-    assert df.disposable_for_giving.iloc[0] + savings_k == df_savings.disposable_for_giving.iloc[0]
+    assert round(df.disposable_for_giving.sum() + savings_k, 3) == round(df_savings.disposable_for_giving.sum(), 3)
+    assert round(df.disposable_for_giving.iloc[0] + savings_k, 3) == round(df_savings.disposable_for_giving.iloc[0], 3)
 
 
 def test_pretax_giving():
