@@ -7,8 +7,15 @@ from helpers import (
     dict_values_to_thousands,
     dict_keys_to_thousands,
     check_valid_keys,
-    constant_dict
 )
+
+
+def constant_dict(current_age, life_exp_years, value) -> dict:
+    result_dict = {}
+    result_dict[current_age] = value
+    result_dict[life_exp_years] = value
+    return result_dict
+
 
 # # # INTRO BEFORE FORM
 
