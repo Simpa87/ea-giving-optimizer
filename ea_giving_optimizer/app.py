@@ -64,6 +64,10 @@ with st.form("input_assumptions", clear_on_submit=False):
                 'Cost of saving a life at full quality in USD (e.g. roughly $3000 - $4500)',
                 min_value=1000, max_value=6000, value=3500
             )/1000
+            givewell_url = ('https://www.givewell.org/charities/top-charities')
+            st.caption("Cost of saving a life at full quality can be estimated from randomized controlled trials, "
+                       " see for example [GiveWell top charities](%s)" % givewell_url)
+
         else:
             save_qa_life_cost_k = 3500/1000
 
@@ -72,10 +76,6 @@ with st.form("input_assumptions", clear_on_submit=False):
             is_giving_pretax = pre_post == 'Pre-tax'
         else:
             is_giving_pretax = False
-
-        givewell_url = ('https://www.givewell.org/charities/top-charities')
-        st.caption("Cost of saving a life at full quality can be estimated from randomized controlled trials, "
-                   " see for example [GiveWell top charities](%s)" % givewell_url)
 
         current_age = st.slider('Current age', min_value=15, max_value=150, value=30)
         if not st.session_state.is_advanced:
