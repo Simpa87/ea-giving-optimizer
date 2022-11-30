@@ -232,7 +232,7 @@ if run:
             if (conf.df['disposable_for_giving'] < 0).any():
                 st.write(
                     "<< Warning! >> There are negative values in disposable income left for giving. "
-                    "While this should ideally be subtracted from total imapct, it has not yet "
+                    "While this should ideally be subtracted from total impact, it has not yet "
                     "been properly tested and can lead to unexpected effects."
                 )
 
