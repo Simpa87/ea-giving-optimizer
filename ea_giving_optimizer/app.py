@@ -138,7 +138,7 @@ with st.form("input_assumptions", clear_on_submit=False):
             month_req_cost_k_per_age = st.text_input(
                 'Required cost of living per month per age as a dictionary '
                  '{age: cost}, they will be interpolated linearly',
-                value='{30: 1800, 65: 2000, 66: 1500}'
+                value='{30: 1800, 65: 2000, 66: 1100}'
             )
             month_req_cost_k_per_age = dict_values_to_thousands(eval(month_req_cost_k_per_age))
         else:
@@ -228,6 +228,14 @@ if run:
             )
 
             run_linear_optimization(conf)
+
+            if (conf.df['disposable_for_giving'] < 0).any():
+                st.write(
+                    "<< Warning! >> There are negative values in disposable income left for giving. "
+                    "While this should ideally be subtracted from total imapct, it has not yet "
+                    "been properly tested and can lead to unexpected effects."
+                )
+
             st.write(f"Lives saved: {conf.lives_saved}, Sum given: {conf.sum_given_m :.2f} million USD ")
 
             # Lives saved as person symbols
