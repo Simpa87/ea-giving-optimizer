@@ -6,32 +6,32 @@ from scipy.optimize import linprog
 
 class Config:
 
-    def __init__(self,
-                 # Just example data!
+    def __init__(
+            self,
 
-                 # General assumptions
-                 current_age: int,
-                 current_savings_k: float,
-                 life_exp_years: int,
-                 save_qa_life_cost_k: float,
-                 is_giving_pretax: bool,
+             # General assumptions
+             current_age: int,
+             current_savings_k: float,
+             life_exp_years: int,
+             save_qa_life_cost_k: float,
+             is_giving_pretax: bool,
 
-                 # Per age
-                 month_salary_k_per_age: dict,
-                 month_req_cost_k_per_age: dict,
+             # Per age
+             month_salary_k_per_age: dict,
+             month_req_cost_k_per_age: dict,
 
-                 # Marginal taxation
-                 share_tax_per_k_salary: dict,
+             # Marginal taxation
+             share_tax_per_k_salary: dict,
 
-                 # Return on savings e.g. stock market rate
-                 return_rate_after_inflation: float,
+             # Return on savings e.g. stock market rate
+             return_rate_after_inflation: float,
 
-                 # Cost of exponential risks compounding
-                 existential_risk_discount_rate: float,
+             # Cost of exponential risks compounding
+             existential_risk_discount_rate: float,
 
-                 # E.g. leaking money to other causes
-                 implementation_factor_per_age: dict,
-                 ):
+             # E.g. leaking money to other causes
+             implementation_factor_per_age: dict,
+    ):
 
         # Assert Consistency
         assert all((0 <= v <= 1) for v in share_tax_per_k_salary.values())
@@ -92,18 +92,6 @@ class Config:
         # Left join (map) interpolated cost per age
         df['req_cost_k_year'] = df['age'].map(cost_per_age_df.to_dict()['req_cost']) * 12
 
-        # Implementation factor per age
-        impl_factor_per_age_df = self.interpolate_df_from_dict(
-            implementation_factor_per_age,
-            min_idx=min(implementation_factor_per_age.keys()),
-            max_idx=max(implementation_factor_per_age.keys()),
-            col_name='implementation_factor',
-        )
-
-        # Left join (map) it
-        df['implementation_factor'] = df['age'].map(impl_factor_per_age_df.to_dict()['implementation_factor'])
-
-
         # Need to ffill and bfill after the join, which needs to initially be before cutting at "age"
         # to capture start and stop values that might be outside bounds
         df = self.ffill_bfill_cols(df)
@@ -114,6 +102,24 @@ class Config:
             .set_index('age')
             .reindex(list(range(current_age, life_exp_years + 1)))
             .reset_index()
+        )
+
+        # Implementation factor per age
+        impl_factor_per_age_df = self.interpolate_df_from_dict(
+            implementation_factor_per_age,
+            min_idx=min(implementation_factor_per_age.keys()),
+            max_idx=max(implementation_factor_per_age.keys()),
+            col_name='implementation_factor',
+        )
+
+        # Left join (map) implementation - Needs to be after the reindexing
+        df['implementation_factor'] = (
+            df['age']
+            .map(
+                impl_factor_per_age_df
+                .to_dict()
+                ['implementation_factor']
+            )
         )
 
         # Once again fill cols if age or death was outside bounds
@@ -134,6 +140,7 @@ class Config:
         df['disposable_for_giving'] = df['disposable_for_giving'].ffill()
 
         df = df.set_index('age')
+        assert df.isna().sum().sum() == 0, 'There are nulls in df'
         self.df = df
 
         # Placeholders for result
@@ -153,9 +160,8 @@ class Config:
     @staticmethod
     def ffill_bfill_cols(df):
         df = df.copy()
-        df['salary_k'] = df['salary_k'].ffill().bfill()
-        df['req_cost_k_year'] = df['req_cost_k_year'].ffill().bfill()
-        df['implementation_factor'] = df['implementation_factor'].ffill().bfill()
+        for c in df.columns:
+            df[c] = df[c].ffill().bfill()
         return df
 
     def interpolate_df_from_dict(self, data_dict, min_idx, max_idx, col_name, step_size=1):
@@ -171,7 +177,11 @@ class Config:
 
     def plotly_summary_cum(self, height=350, width=800):
         plot_df = (
-            self.df[['give_recommendation_m']].cumsum().round(3).reset_index().rename(
+            self.df[['give_recommendation_m']]
+            .cumsum()
+            .round(3)
+            .reset_index()
+            .rename(
                 columns={'age': 'Age', 'give_recommendation_m': 'Cum. Suggested Giving [m USD]'}
             )
         )
@@ -183,7 +193,10 @@ class Config:
 
     def plotly_summary(self, height=350, width=800):
         plot_df = (
-            self.df[['give_recommendation_k']].round(3).reset_index().rename(
+            self.df[['give_recommendation_k']]
+            .round(3)
+            .reset_index()
+            .rename(
                 columns={'age': 'Age', 'give_recommendation_k': 'Suggested Giving [k USD]'}
             )
         )
