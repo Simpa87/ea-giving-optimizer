@@ -186,6 +186,12 @@ with st.form("input_assumptions", clear_on_submit=False):
                    "as much as possible straight way, though this also depends on assumptions about the implementation "
                    "factor when using Advanced mode.")
 
+        giving_article = ('https://www.givingwhatwecan.org/blog/giving-effectively-by-hacking-your-psychology')
+        st.caption(
+            "For more on *psychological* mechanisms supporting effective giving, "
+            "see article at Giving What We Can: [link](%s)" % giving_article
+        )
+
         if st.session_state.is_advanced:
             st.caption("A limitation of the pre-tax giving implementation is that in reality, you probably have to donate this "
                        "money straight away. But you can more or less simulate this by setting the stock market return to 0.")
